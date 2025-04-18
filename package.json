@@ -1,5 +1,5 @@
 {
-  "name": "template-electron-forge-vite",
+  "name": "protect-your-eyes",
   "version": "1.0.0",
   "description": "A simple starting point for ElectronJs projects using React-TS",
   "main": ".vite/build/main.js",
@@ -74,7 +74,8 @@
     "type": "git",
     "url": "https://github.com/julillermo/template-electron-forge-vite-react-ts.git"
   },
-  "author": "Julius Ray Guillermo",
+  "product-name": "眸安——智能屏幕健康守护者",
+  "author": "yuxing",
   "license": "MIT",
   "workspaces": {
     "packages": [
