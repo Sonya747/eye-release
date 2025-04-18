@@ -1,11 +1,12 @@
 import { app, BrowserWindow } from "electron";
 import ipcHandler from "./ipcHanlder";
 import path from "path";
+// import started from 'electron-squirrel-startup';
 
-// Handle creating/removing shortcuts on Windows when installing/uninstalling.
-if (require("electron-squirrel-startup")) {
-  app.quit();
-}
+// // Handle creating/removing shortcuts on Windows when installing/uninstalling.
+// if (started) {
+//   app.quit();
+// }
 
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string;
 declare const MAIN_WINDOW_VITE_NAME: string;

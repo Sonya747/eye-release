@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { VideoCameraOutlined } from "@ant-design/icons";
 import "./index.css";
 import { message } from "antd";
+import { VideoCameraOutlined } from "@ant-design/icons";
 import useSound from "use-sound";
 import sound from "../../assets/audio/notification.wav";
 // import { EyeState } from "../../api/types";
