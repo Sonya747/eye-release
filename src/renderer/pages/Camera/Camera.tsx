@@ -14,7 +14,7 @@ const Camera = () => {
   const [isCameraOn, setIsCameraOn] = useState(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const [playSound] = useSound(sound, { volume: 0.5 });
-  const playRef = useRef(false)
+  const playRef = useRef(false);
 
   // const [eyeWidth, eyeHeight] = [10, 10]; // TODO :临时的坐标差值骇值
 
@@ -55,12 +55,40 @@ const Camera = () => {
 
       // const response = await postPicture(blob);
 
-      const data = Math.random()
-      if(data>0.5) {
+      const data = Math.random();
+      if (data > 0.8) {
         playSound(); //TODO 读取设置
-        message.info("头部倾斜")
-    }
-      
+        message.info({
+          content: (
+            <span>
+              ⚠️🐢
+              小龟提醒：检测到头部侧倾啦！端正坐姿可以保护我们的小颈椎哟～😊ﾉ
+            </span>
+          ),
+          style: { color: "#ff6b6b" },
+        });
+      } else if (data > 0.3 && data < 0.6) {
+        playSound(); //TODO 读取设置
+        message.info({
+          content: (
+            <span>
+              🐢 安全距离警报！太靠近屏幕会让小龟都紧张啦～ 后退一点点吧😄
+            </span>
+          ),
+          style: { color: "#ff922b" },
+        });
+      } else if (data < 0.2) {
+        playSound();
+        message.info({
+          content: (
+            <span>
+              🦒 长颈鹿提醒：低头太久脖子会累哦～ 快和我一起抬头挺胸吧！😆
+            </span>
+          ),
+          style: { color: "#51cf66" },
+        });
+      }
+
       // console.log("分析结果:", data,data.position);
       // if(data>0.5) {
       //   //TODO 眼睛处理
@@ -76,7 +104,7 @@ const Camera = () => {
 
   const stopCamera = async () => {
     if (stream && isCameraOn) {
-      playRef.current=false
+      playRef.current = false;
       stream.getTracks().forEach((track) => track.stop());
       setStream(null);
       setIsCameraOn(false);
@@ -91,9 +119,9 @@ const Camera = () => {
   };
 
   const startCamera = async () => {
-    if(isCameraOn&&!stream) return;
-    if(playRef.current) return;
-    playRef.current = true
+    if (isCameraOn && !stream) return;
+    if (playRef.current) return;
+    playRef.current = true;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
       setStream(stream);
@@ -153,7 +181,7 @@ const Camera = () => {
           }}
           onCanPlay={handleVideoConnect}
           onClick={isCameraOn ? stopCamera : startCamera}
-          onDoubleClick={()=>{}}
+          onDoubleClick={() => {}}
         />
 
         {/* 状态指示层 */}

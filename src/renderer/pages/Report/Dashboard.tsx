@@ -270,6 +270,7 @@ const Dashboard: React.FC = () => {
               dayOfWeek: {
                 alias: '星期',
                 values: {
+                  //@ts-ignore
                   'Mon': '周一',
                   'Tue': '周二',
                   'Wed': '周三',
@@ -281,10 +282,13 @@ const Dashboard: React.FC = () => {
               }
             }}
             padding="auto"
-            // tooltip={{
-            //   title: (_title, datum) => dayjs(datum.date).format('MMM DD'),
-            //   fields: ['hour', 'value'],
-            // }}
+            tooltip={{
+              
+              title: (_title, datum) => {
+                //@ts-ignore
+                return dayjs(datum.date).format('MMM DD')},
+              fields: ['hour', 'value'],
+            }}
             interactions={[{ type: 'element-active' }, { type: 'brush' }]}
             animation={{
               appear: {
@@ -352,6 +356,7 @@ const Dashboard: React.FC = () => {
                 shape: 'circle',
                 style: {
                   fill: '#fff',
+                  //@ts-ignore
                   stroke: ({ type }) => ({
                     '俯仰角': '#1890ff',
                     '偏航角': '#ff4d4f',
@@ -432,23 +437,13 @@ const Dashboard: React.FC = () => {
             marker: (text, _index, item) => ({
               symbol: text === 'score' ? 'square' : 'circle',
               style: {
+                //@ts-ignore
                 fill: text === 'score' ? 'transparent' : item?.color,
+                //@ts-ignore
                 stroke: text === 'score' ? '#722ed1' : item?.color
               }
             })
           }}
-          annotations={[
-            // 异常日标注
-            ...postureData.filter(d => d.anomaly).map(d => ({
-              type: 'region',
-              start: [d.date, 'min'],
-              end: [d.date, 'max'],
-              style: {
-                fill: '#ff4d4f',
-                opacity: 0.1
-              }
-            })),
-          ]}
         />
         );
     }
