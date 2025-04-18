@@ -13,7 +13,15 @@
   "dependencies": {
     "electron-squirrel-startup": "^1.0.1",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^7.1.5",
+    "@ant-design/charts": "^2.2.7",
+    "antd": "^5.22.7",
+    "axios": "^1.8.4",
+    "path": "^0.12.7",
+    "react-router": "^7.1.1",
+    "use-sound": "^5.0.0"
+
   },
   "devDependencies": {
     "@electron-forge/cli": "^7.4.0",

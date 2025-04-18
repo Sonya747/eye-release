@@ -1,0 +1,33 @@
+.dashboard-container {
+  padding: 24px;
+  background: #0a0a0a;
+  
+  .glowing-title {
+    display: flex;
+    align-items: center;
+    font-size: 24px;
+    color: #fff;
+    text-shadow: 0 0 10px rgba(255, 111, 49, 0.5);
+  }
+
+  .glowing-card {
+    border: 1px solid rgba(255, 111, 49, 0.3);
+    box-shadow: 0 0 15px rgba(255, 111, 49, 0.2);
+    transition: all 0.3s ease;
+    
+    &:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 5px 25px rgba(255, 111, 49, 0.4);
+    }
+  }
+
+  .animated-card {
+    border-radius: 12px;
+    animation: glow 2s infinite alternate;
+    
+    @keyframes glow {
+      from { box-shadow: 0 0 10px #7eb6d4; }
+      to { box-shadow: 0 0 20px #ff6f31; }
+    }
+  }
+}
