@@ -11,9 +11,11 @@ import path from "path";
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string;
 declare const MAIN_WINDOW_VITE_NAME: string;
 
+let mainWindow: BrowserWindow | null = null;
+
 const createWindow = () => {
   // Create the browser window.
-  const mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 1200,
     height: 825, // added 25px to account for the global menu bar,
     webPreferences: {
@@ -51,7 +53,7 @@ const createWindow = () => {
     );
   }
 
-  ipcHandler();
+  ipcHandler(mainWindow);
 };
 
 // This method will be called when Electron has finished

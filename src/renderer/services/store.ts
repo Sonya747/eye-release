@@ -1,4 +1,4 @@
-import ElectronStore from 'electron-store';
+import type { Settings } from '../../main/services/store';
 
 // 定义设置的类型
 export interface Settings {
@@ -18,39 +18,30 @@ const defaultSettings: Settings = {
   distance: 100,
 };
 
-// 创建 store 实例
-const store = new ElectronStore<Settings>({
-  name: 'settings', // 存储文件名
-  defaults: defaultSettings, // 默认值
-  watch: true, // 启用文件监视
-  schema: {
-    useSound: { type: 'boolean', default: true },
-    rollThreshold: { type: 'number', default: 10 },
-    pitchThreshold: { type: 'number', default: 20 },
-    yawThreshold: { type: 'number', default: 10 },
-    distance: { type: 'number', default: 100 },
-  },
-});
-
 // 获取设置
-export const getSettings = (): Settings => {
-  const settings = store.get('') as Settings;
-  return settings || defaultSettings;
+export const getSettings = async (): Promise<Settings> => {
+  try {
+    const settings = await window.electron.settings.get();
+    return settings || defaultSettings;
+  } catch (error) {
+    console.error('Error getting settings:', error);
+    return defaultSettings;
+  }
 };
 
 // 保存设置
-export const saveSettings = (settings: Settings): void => {
-  Object.entries(settings).forEach(([key, value]) => {
-    store.set(key, value);
-  });
+export const saveSettings = async (settings: Settings): Promise<void> => {
+  try {
+    await window.electron.settings.save(settings);
+  } catch (error) {
+    console.error('Error saving settings:', error);
+    throw error;
+  }
 };
 
 // 监听设置变化
 export const onSettingsChange = (callback: (newValue: Settings, oldValue: Settings) => void) => {
-  const unsubscribe = store.onDidAnyChange((newValue, oldValue) => {
-    callback(newValue as Settings, oldValue as Settings);
-  });
-  return unsubscribe;
+  return window.electron.settings.onChanged(callback);
 };
 
 export default {

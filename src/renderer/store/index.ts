@@ -13,7 +13,7 @@ const defaultSettings = {
 // 从数据库加载设置
 const loadSettings = async () => {
   try {
-    const savedSettings = await window.Electron.settings.get();
+    const savedSettings = await window.electron.settings.get();
     return savedSettings || defaultSettings;
   } catch (error) {
     console.error('Error loading settings:', error);
@@ -23,30 +23,39 @@ const loadSettings = async () => {
 
 interface StoreState {
   userSettings: Settings;
-  setUserSettings: (settings: Settings) => void;
+  setUserSettings: (settings: Settings) => Promise<void>;
 }
 
 const useStore = create<StoreState>((set) => ({
-  // 初始化时从 electron-store 加载设置
-  userSettings: storeService.getSettings(),
+  // 初始使用默认设置
+  userSettings: {
+    useSound: true,
+    rollThreshold: 10,
+    pitchThreshold: 20,
+    yawThreshold: 10,
+    distance: 100,
+  },
   
   // 更新设置
-  setUserSettings: (settings) => {
-    // 保存到 electron-store
-    storeService.saveSettings(settings);
-    // 更新状态
-    set({ userSettings: settings });
+  setUserSettings: async (settings) => {
+    try {
+      await storeService.saveSettings(settings);
+      set({ userSettings: settings });
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      throw error;
+    }
   },
 }));
+
+// 初始化时加载设置
+storeService.getSettings().then((settings) => {
+  useStore.setState({ userSettings: settings });
+});
 
 // 监听设置变化
 storeService.onSettingsChange((newValue) => {
   useStore.setState({ userSettings: newValue });
-});
-
-// 初始化时加载设置
-loadSettings().then((settings) => {
-  useStore.setState({ userSettings: settings });
 });
 
 export default useStore;

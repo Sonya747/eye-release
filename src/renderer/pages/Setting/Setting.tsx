@@ -15,7 +15,7 @@ import { ExclamationCircleOutlined, LoadingOutlined } from "@ant-design/icons";
 import { useEffect, useRef, useState } from "react"; // 新增状态管理
 import "./index.css";
 // import useStore from "src/renderer/store";
-// import useStore from "../../store";
+import useStore from "../../store";
 
 const { Option } = Select;
 
