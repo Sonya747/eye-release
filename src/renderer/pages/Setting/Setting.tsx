@@ -14,16 +14,18 @@ import {
 import { ExclamationCircleOutlined, LoadingOutlined } from "@ant-design/icons";
 import { useEffect, useRef, useState } from "react"; // 新增状态管理
 import "./index.css";
+// import useStore from "src/renderer/store";
+// import useStore from "../../store";
 
 const { Option } = Select;
 
 // 接口定义
 export interface SettingData {
-  alter_method: number;
-  yall: number;
-  roll: number;
-  pitch: number;
-  eyeWidth: number;
+  useSound: boolean;
+  rollThreshold: number;
+  pitchThreshold: number;
+  yawThreshold: number;
+  distance: number;
 }
 
 const Setting = () => {
@@ -34,7 +36,7 @@ const Setting = () => {
   const [modalloading, setmodalLoading] = useState(true);
   const videoRef = useRef(null);
   const mediaStreamRef = useRef(null);
-
+  const {userSettings, setUserSettings} = useStore();
   // 初始化摄像头
   const initCamera = async () => {
     try {
@@ -69,11 +71,12 @@ const Setting = () => {
       // 5秒后完成校准
       const timer = setTimeout(() => {
         setmodalLoading(false);
+        //TODO 
         message.success("校准完成");
-        form.setFieldValue("pitch", 10);
-        form.setFieldValue("roll", 8);
-        form.setFieldValue("yall", 8);
-        form.setFieldValue("eyeWidth", 15);
+        form.setFieldValue("pitchThreshold", 10);
+        form.setFieldValue("rollThreshold", 8);
+        form.setFieldValue("yawThreshold", 8);
+        form.setFieldValue("distance", 15);
         handleCancel();
       }, 5000);
 
@@ -84,44 +87,43 @@ const Setting = () => {
   // 参数配置与后端字段对齐
   const params = [
     {
-      label: "提醒方式",
-      value: "alter_method" as const,
-      description: "系统通知方式选择",
+      label: "声音提醒",
+      value: "useSound" as const,
+      description: "开启或关闭声音提醒功能",
       options: [
-        { label: "音乐提醒", value: 1 },
-        { label: "静默通知", value: 0 },
+        { label: "开启", value: true },
+        { label: "关闭", value: false },
       ],
     },
     {
-      label: "侧向角度",
-      value: "yall" as const, //TODO yaw
-      description: "这个参数用于测算身体侧倾的角度，指标越小，提醒越灵敏",
+      label: "前后倾斜阈值",
+      value: "rollThreshold" as const,
+      description: "头部前后倾斜的提醒阈值，数值越小提醒越灵敏",
       min: 0,
       max: 90,
       step: 1,
     },
     {
-      label: "纵向调节",
-      value: "roll" as const,
-      description: "这个参数用于测算头部前后偏移的角度，指标越小，提醒越灵敏",
+      label: "左右倾斜阈值",
+      value: "pitchThreshold" as const,
+      description: "头部左右倾斜的提醒阈值，数值越小提醒越灵敏",
       min: 0,
       max: 90,
       step: 1,
     },
     {
-      label: "横向调节",
-      value: "pitch" as const,
-      description:
-        "这个参数用于测算头部旋转的角度，用于辅助身体侧倾和低头的检测，指标越小，提醒越灵敏",
+      label: "左右转动阈值",
+      value: "yawThreshold" as const,
+      description: "头部左右转动的提醒阈值，数值越小提醒越灵敏",
       min: 0,
       max: 90,
       step: 1,
     },
     {
-      label: "眼间距离",
-      value: "eyeWidth" as const,
-      description: "这个参数用于测算面部到屏幕的距离，指标越大，健康距离越远",
-      min: 5,
+      label: "距离阈值",
+      value: "distance" as const,
+      description: "眼睛到屏幕的距离阈值（厘米），数值越大提醒距离越远",
+      min: 20,
       max: 100,
       step: 1,
     },
@@ -132,15 +134,13 @@ const Setting = () => {
     const fetchSettings = async () => {
       setLoading(true);
       try {
-        const data = {
-          alter_method: 1,
-          yall: 10,
-          roll: 10,
-          pitch: 10,
-          eyeWidth: 14,
-        };
+        const initSettings = userSettings;
+        form.setFieldValue("useSound", initSettings.useSound);
+        form.setFieldValue("rollThreshold", initSettings.rollThreshold);
+        form.setFieldValue("pitchThreshold", initSettings.pitchThreshold);
+        form.setFieldValue("yawThreshold", initSettings.yawThreshold);
+        form.setFieldValue("distance", initSettings.distance);
         // if (!response.ok) throw new Error('No settings');
-        form.setFieldsValue(data);
       } catch (error) {
         console.log("使用默认设置", error);
       } finally {
@@ -151,21 +151,17 @@ const Setting = () => {
   }, [form]);
 
   // 表单提交
-  const onFinish = async (values: SettingData) => {
+  const onFinish = (values: SettingData) => {
     setLoading(true);
     try {
-    //   const response = await postSetting(values);
-    //   const result = response;
-    //   form.setFieldsValue({
-    //     ...result,
-    //   });
+      setUserSettings(values);
+      message.success("设置已保存");
+      setSubmitError(null);
     } catch (error) {
-      setSubmitError("保存失败，请检查网络连接后重试");
+      setSubmitError("保存失败，请重试");
       console.error("保存错误:", error);
     } finally {
       setLoading(false);
-      message.success("设置已保存");
-      setSubmitError(null);
     }
   };
 
@@ -216,7 +212,7 @@ const Setting = () => {
             rules={[{ required: true }]}
             validateTrigger="onBlur"
           >
-            {param.value === "alter_method" ? (
+            {param.value === "useSound" ? (
               <Select
                 size="large"
                 style={{ borderRadius: 8 }}
@@ -224,7 +220,7 @@ const Setting = () => {
               >
                 {param.options?.map((opt) => (
                   <Option
-                    key={opt.value}
+                    key={opt.value.toString()}
                     value={opt.value}
                     style={{ padding: "8px 16px" }}
                   >

@@ -18,6 +18,7 @@ const createWindow = () => {
     height: 825, // added 25px to account for the global menu bar,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
+      nodeIntegration: true,
 
       // Context Isolation means that preload scripts are isolated from
       // the renderer's main world to avoid leaking any privileged APIs

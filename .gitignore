@@ -104,3 +104,6 @@ out/
 *.njsproj
 *.sln
 *.sw?
+
+# Model files
+src/renderer/assets/models/

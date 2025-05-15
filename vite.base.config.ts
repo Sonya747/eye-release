@@ -65,6 +65,14 @@ export function pluginExposeRenderer(name: string): Plugin {
       // Expose server for preload scripts hot reload.
       process.viteDevServers[name] = server;
 
+      // Add middleware to handle WASM files
+      server.middlewares.use((req, res, next) => {
+        if (req.url?.endsWith('.wasm')) {
+          res.setHeader('Content-Type', 'application/wasm');
+        }
+        next();
+      });
+
       server.httpServer?.once('listening', () => {
         const addressInfo = server.httpServer!.address() as AddressInfo;
         // Expose env constant for main process use.

@@ -108,7 +108,7 @@ const Home = () => {
 
         <Col xs={24} md={12}>
           <Card 
-            title="快捷操作" 
+            title="核心功能" 
             style={{ borderRadius: 15, height: '100%' }}
           >
             <Row gutter={[16, 16]}>

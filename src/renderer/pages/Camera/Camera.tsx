@@ -4,6 +4,12 @@ import { message } from "antd";
 import { VideoCameraOutlined } from "@ant-design/icons";
 import useSound from "use-sound";
 import sound from "../../assets/audio/notification.wav";
+import { analyze_video, loadSession } from "../../backend";
+import { InferenceSession } from "onnxruntime-web";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
+import modelPath from '../../assets/models/head.onnx';
+
 // import { EyeState } from "../../api/types";
 // import { endSession, startSession } from "../../api/usage";
 // import {  postPicture } from "../../api/video";
@@ -15,48 +21,83 @@ const Camera = () => {
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const [playSound] = useSound(sound, { volume: 0.5 });
   const playRef = useRef(false);
+  const [session, setSession] = useState<InferenceSession | null>(null);
+  const sessionRef = useRef<InferenceSession | null>(null);
 
   // const [eyeWidth, eyeHeight] = [10, 10]; // TODO :临时的坐标差值骇值
 
+  // 清理函数
+  const cleanup = async () => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    if (sessionRef.current) {
+      try {
+        sessionRef.current = null;
+      } catch (error) {
+        console.error("Error ending session:", error);
+      }
+      sessionRef.current = null;
+      setSession(null);
+    }
+  };
+
+  // 组件卸载时清理
+  useEffect(() => {
+    return () => {
+      cleanup();
+    };
+  }, []);
+
+  // 当 isCameraOn 改变时清理
   useEffect(() => {
     if (!isCameraOn) {
-      stopCamera();
-      return;
+      cleanup();
     }
-
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-    };
   }, [isCameraOn]);
 
-  const analyzeFrame = async () => {
+  const analyzeFrame = async (session: InferenceSession) => {
     if (!videoRef.current) return;
 
     const canvas = document.createElement("canvas");
     const context = canvas.getContext("2d");
     if (!context) return;
 
-    canvas.width = videoRef.current.videoWidth;
-    canvas.height = videoRef.current.videoHeight;
+    // 设置 canvas 尺寸为模型输入尺寸
+    canvas.width = 320;
+    canvas.height = 320;
     context.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
 
     try {
-      // const blob = await new Promise<Blob>((resolve) => {
-      //   canvas.toBlob(
-      //     (blob) => {
-      //       if (blob) resolve(blob);
-      //     },
-      //     "image/jpeg",
-      //     0.7
-      //   );
-      // });
+      // 获取图像数据并直接转换为模型输入格式
+      const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+      const data = imageData.data;
+
+      // 转换为模型输入格式 (NCHW)
+      const inputTensor = new Float32Array(1 * 3 * canvas.width * canvas.height);
+
+      // 归一化并转换为 NCHW 格式
+      for (let c = 0; c < 3; c++) {
+        for (let h = 0; h < canvas.height; h++) {
+          for (let w = 0; w < canvas.width; w++) {
+            const idx = (h * canvas.width + w) * 4 + c;
+            const normalizedValue = data[idx] / 255.0;
+            inputTensor[c * canvas.width * canvas.height + h * canvas.width + w] = normalizedValue;
+          }
+        }
+      }
+
+      // 直接传递处理后的张量数据
+      const result = await analyze_video(inputTensor, session);
+      console.log("分析结果:", result.position);
+
+      const position = result.position;
 
       // const response = await postPicture(blob);
 
-      const data = Math.random();
-      if (data > 0.8) {
+      // const data = Math.random();
+      if (Math.abs(position.yaw) > 10) {
         playSound(); //TODO 读取设置
         message.info({
           content: (
@@ -67,7 +108,7 @@ const Camera = () => {
           ),
           style: { color: "#ff6b6b" },
         });
-      } else if (data > 0.3 && data < 0.6) {
+      } else if (Math.abs(position.pitch) > 20) {
         playSound(); //TODO 读取设置
         message.info({
           content: (
@@ -77,17 +118,21 @@ const Camera = () => {
           ),
           style: { color: "#ff922b" },
         });
-      } else if (data < 0.2) {
+      } else if (Math.abs(position.roll) > 10) {
         playSound();
         message.info({
           content: (
             <span>
-              🦒 长颈鹿提醒：低头太久脖子会累哦～ 快和我一起抬头挺胸吧！😆
+              🐢 安全距离警报！太靠近屏幕会让小龟都紧张啦～ 后退一点点吧😄
             </span>
           ),
           style: { color: "#51cf66" },
         });
       }
+
+      // const result = await analyze_video(blob);
+      // console.log("分析结果:", result);
+
 
       // console.log("分析结果:", data,data.position);
       // if(data>0.5) {
@@ -108,13 +153,8 @@ const Camera = () => {
       stream.getTracks().forEach((track) => track.stop());
       setStream(null);
       setIsCameraOn(false);
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-      // const res = await endSession();
+      await cleanup();
       message.info("监测模式结束");
-      // console.log("endSession", res);
     }
   };
 
@@ -123,19 +163,26 @@ const Camera = () => {
     if (playRef.current) return;
     playRef.current = true;
     try {
+      // 确保之前的 session 已清理
+      await cleanup();
+
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
       setStream(stream);
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
       }
       setIsCameraOn(true);
-      // const res = await startSession();
-      // console.log("startSession", res);
+
+      // 创建新的 session
+      const newSession = await loadSession(modelPath);
+      sessionRef.current = newSession;
+      setSession(newSession);
+
       message.success("检测模式开启");
-      // 设置定时器，每1s发送一帧
-      intervalRef.current = setInterval(analyzeFrame, 5000);
+      intervalRef.current = setInterval(() => analyzeFrame(newSession), 5000);
     } catch (err) {
       console.error("video stream error", err);
+      cleanup();
     }
   };
 
@@ -168,9 +215,8 @@ const Camera = () => {
         <video
           ref={videoRef}
           autoPlay
-          className={`video-element ${
-            isCameraOn ? "connected" : "disconnected"
-          }`}
+          className={`video-element ${isCameraOn ? "connected" : "disconnected"
+            }`}
           style={{
             width: "100%",
             height: "100%",
@@ -181,7 +227,7 @@ const Camera = () => {
           }}
           onCanPlay={handleVideoConnect}
           onClick={isCameraOn ? stopCamera : startCamera}
-          onDoubleClick={() => {}}
+          onDoubleClick={() => { return }}
         />
 
         {/* 状态指示层 */}
@@ -201,9 +247,8 @@ const Camera = () => {
               height: 12,
               borderRadius: "50%",
               background: isCameraOn ? "#52c41a" : "#ff4d4f",
-              boxShadow: `0 0 8px ${
-                isCameraOn ? "rgba(82, 196, 26, 0.4)" : "rgba(255, 77, 79, 0.4)"
-              }`,
+              boxShadow: `0 0 8px ${isCameraOn ? "rgba(82, 196, 26, 0.4)" : "rgba(255, 77, 79, 0.4)"
+                }`,
               animation: "breathing 1.5s infinite",
             }}
           />
@@ -234,7 +279,7 @@ const Camera = () => {
             //   transform: 'translate(-50%, -50%) scale(1.1)'
             // }
           }}
-          // onClick={isCameraOn ? stopCamera : startCamera}
+        // onClick={isCameraOn ? stopCamera : startCamera}
         ></div>
 
         {/* 未连接时的占位符 */}
