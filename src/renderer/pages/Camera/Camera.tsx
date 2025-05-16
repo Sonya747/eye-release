@@ -9,6 +9,7 @@ import { InferenceSession } from "onnxruntime-web";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 import modelPath from '../../assets/models/head.onnx';
+import useStore from "../../store";
 
 // import { EyeState } from "../../api/types";
 // import { endSession, startSession } from "../../api/usage";
@@ -23,6 +24,8 @@ const Camera = () => {
   const playRef = useRef(false);
   const [session, setSession] = useState<InferenceSession | null>(null);
   const sessionRef = useRef<InferenceSession | null>(null);
+  const { userSettings, setUserSettings } = useStore();
+
 
   // const [eyeWidth, eyeHeight] = [10, 10]; // TODO :临时的坐标差值骇值
 
@@ -97,8 +100,8 @@ const Camera = () => {
       // const response = await postPicture(blob);
 
       // const data = Math.random();
-      if (Math.abs(position.yaw) > 10) {
-        playSound(); //TODO 读取设置
+      if (Math.abs(userSettings.yawThreshold - position.yaw) > 5) {
+        userSettings.useSound && playSound();
         message.info({
           content: (
             <span>
@@ -108,8 +111,8 @@ const Camera = () => {
           ),
           style: { color: "#ff6b6b" },
         });
-      } else if (Math.abs(position.pitch) > 20) {
-        playSound(); //TODO 读取设置
+      } else if (Math.abs(userSettings.pitchThreshold - position.pitch) > 5) {
+        userSettings.useSound && playSound();
         message.info({
           content: (
             <span>
@@ -118,8 +121,8 @@ const Camera = () => {
           ),
           style: { color: "#ff922b" },
         });
-      } else if (Math.abs(position.roll) > 10) {
-        playSound();
+      } else if (Math.abs(userSettings.rollThreshold - position.roll) > 5) {
+        userSettings.useSound && playSound();
         message.info({
           content: (
             <span>
@@ -163,7 +166,6 @@ const Camera = () => {
     if (playRef.current) return;
     playRef.current = true;
     try {
-      // 确保之前的 session 已清理
       await cleanup();
 
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
@@ -179,7 +181,7 @@ const Camera = () => {
       setSession(newSession);
 
       message.success("检测模式开启");
-      intervalRef.current = setInterval(() => analyzeFrame(newSession), 5000);
+      intervalRef.current = setInterval(() => analyzeFrame(newSession), 2000);
     } catch (err) {
       console.error("video stream error", err);
       cleanup();

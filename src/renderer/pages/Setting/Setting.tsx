@@ -16,6 +16,10 @@ import { useEffect, useRef, useState } from "react"; // 新增状态管理
 import "./index.css";
 // import useStore from "src/renderer/store";
 import useStore from "../../store";
+import { analyze_video, loadSession } from "../../backend";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
+import modelPath from '../../assets/models/head.onnx';
 
 const { Option } = Select;
 
@@ -36,25 +40,84 @@ const Setting = () => {
   const [modalloading, setmodalLoading] = useState(true);
   const videoRef = useRef(null);
   const mediaStreamRef = useRef(null);
-  const {userSettings, setUserSettings} = useStore();
+  const { userSettings, setUserSettings } = useStore();
   // 初始化摄像头
   const initCamera = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          facingMode: "user"
+        }
+      });
       mediaStreamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        // 确保视频开始播放
+        await videoRef.current.play().catch(error => {
+          console.error("视频播放失败:", error);
+          message.error("视频播放失败");
+        });
       }
-    } catch {
+      return stream;
+    } catch (error) {
+      console.error("摄像头访问失败:", error);
       message.error("无法访问摄像头");
-      setVisible(false);
+      throw error;
     }
   };
 
   // 开始校准流程
-  const startCalibration = () => {
+  const startCalibration = async () => {
     setVisible(true);
     setmodalLoading(true);
+    try {
+      await initCamera();
+      const session = await loadSession(modelPath);
+      // 等待摄像头初始化完成
+      if (!videoRef.current?.srcObject) {
+        throw new Error("视频流未正确初始化");
+      }
+      const canvas = document.createElement("canvas");
+      const context = canvas.getContext("2d");
+      if (!context) throw new Error("canvas context 获取失败");
+
+      // 设置 canvas 尺寸为模型输入尺寸
+      canvas.width = 320;
+      canvas.height = 320;
+      context.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+      // 获取图像数据并直接转换为模型输入格式
+      const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+      const data = imageData.data;
+      const inputTensor = new Float32Array(1 * 3 * canvas.width * canvas.height);
+      for (let c = 0; c < 3; c++) {
+        for (let h = 0; h < canvas.height; h++) {
+          for (let w = 0; w < canvas.width; w++) {
+            const idx = (h * canvas.width + w) * 4 + c;
+            const normalizedValue = data[idx] / 255.0;
+            inputTensor[c * canvas.width * canvas.height + h * canvas.width + w] = normalizedValue;
+          }
+        }
+      }
+      // 直接传递处理后的张量数据 
+      const result = await analyze_video(inputTensor, session);
+      const position = result.position;
+      console.log("校准结果", position)
+      form.setFieldValue("pitchThreshold", position.pitch);
+      form.setFieldValue("rollThreshold", position.roll);
+      form.setFieldValue("yawThreshold", position.yaw);
+      form.setFieldValue("distance", 42); //TODO
+    } catch (error) {
+      message.error(error.message);
+      console.error("分析失败");
+    } finally {
+      setmodalLoading(false);
+      setTimeout(() => {
+        handleCancel();
+      }, 500);
+    }
+
   };
 
   // 关闭弹窗时清理资源
@@ -64,26 +127,6 @@ const Setting = () => {
       mediaStreamRef.current.getTracks().forEach((track) => track.stop());
     }
   };
-
-  useEffect(() => {
-    if (visible) {
-      initCamera();
-      // 5秒后完成校准
-      const timer = setTimeout(() => {
-        setmodalLoading(false);
-        //TODO 
-        message.success("校准完成");
-        form.setFieldValue("pitchThreshold", 10);
-        form.setFieldValue("rollThreshold", 8);
-        form.setFieldValue("yawThreshold", 8);
-        form.setFieldValue("distance", 15);
-        handleCancel();
-      }, 5000);
-
-      return () => clearTimeout(timer);
-    }
-  }, [visible]);
-
   // 参数配置与后端字段对齐
   const params = [
     {
@@ -96,36 +139,36 @@ const Setting = () => {
       ],
     },
     {
-      label: "前后倾斜阈值",
+      label: "前后倾斜标准值",
       value: "rollThreshold" as const,
-      description: "头部前后倾斜的提醒阈值，数值越小提醒越灵敏",
-      min: 0,
-      max: 90,
-      step: 1,
+      description: "头部前后倾斜的提醒标准值，偏离该指标一定程度系统将进行提醒",
+      // min: 0,
+      // max: 90,
+      // step: 1,
     },
     {
-      label: "左右倾斜阈值",
+      label: "左右倾斜标准值",
       value: "pitchThreshold" as const,
-      description: "头部左右倾斜的提醒阈值，数值越小提醒越灵敏",
-      min: 0,
-      max: 90,
-      step: 1,
+      description: "头部左右倾斜的提醒标准值，偏离该指标一定程度系统将进行提醒",
+      // min: 0,
+      // max: 90,
+      // step: 1,
     },
     {
-      label: "左右转动阈值",
+      label: "左右转动标准值",
       value: "yawThreshold" as const,
-      description: "头部左右转动的提醒阈值，数值越小提醒越灵敏",
-      min: 0,
-      max: 90,
-      step: 1,
+      description: "头部左右转动的提醒标准值，偏离该指标一定程度系统将进行提醒",
+      // min: 0,
+      // max: 90,
+      // step: 1,
     },
     {
-      label: "距离阈值",
+      label: "距离标准值",
       value: "distance" as const,
-      description: "眼睛到屏幕的距离阈值（厘米），数值越大提醒距离越远",
-      min: 20,
-      max: 100,
-      step: 1,
+      description: "眼睛到屏幕的距离标准值，偏离该指标一定程度系统将进行提醒",
+      // min: 20,
+      // max: 100,
+      // step: 1,
     },
   ];
 
@@ -230,16 +273,16 @@ const Setting = () => {
               </Select>
             ) : (
               <InputNumber
-                min={param.min}
-                max={param.max}
-                step={param.step}
+                // min={param.min}
+                // max={param.max}
+                // step={param.step}
                 size="large"
                 style={{
                   width: "100%",
                   borderRadius: 8,
                 }}
-                precision={1}
-                formatter={(value) => `${Number(value).toFixed(0)}`}
+                precision={2}
+                formatter={(value) => `${Number(value).toFixed(2)}`}
               />
             )}
           </Form.Item>
@@ -284,7 +327,8 @@ const Setting = () => {
                   ref={videoRef}
                   autoPlay
                   playsInline
-                  style={{ width: "100%", maxWidth: 500 }}
+                  muted
+                  style={{ width: "100%", maxWidth: 500, transform: "scaleX(-1)" }}
                 />
 
                 <div style={{ marginTop: 20 }}>
@@ -295,7 +339,7 @@ const Setting = () => {
                     spinning={loading}
                   />
                   <p style={{ marginTop: 10 }}>
-                    {modalloading ? "校准中，请保持最佳姿势..." : "校准完成"}
+                    {modalloading ? '模型加载中' : "校准完成"}
                   </p>
                 </div>
               </div>
