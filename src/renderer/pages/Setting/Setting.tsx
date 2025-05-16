@@ -107,7 +107,7 @@ const Setting = () => {
       form.setFieldValue("pitchThreshold", position.pitch);
       form.setFieldValue("rollThreshold", position.roll);
       form.setFieldValue("yawThreshold", position.yaw);
-      form.setFieldValue("distance", 42); //TODO
+      // form.setFieldValue("distance", 42); //TODO
     } catch (error) {
       message.error(error.message);
       console.error("分析失败");
@@ -163,9 +163,11 @@ const Setting = () => {
       // step: 1,
     },
     {
-      label: "距离标准值",
+      // label: "距离标准值",
+      label: "偏移阈值",
       value: "distance" as const,
-      description: "眼睛到屏幕的距离标准值，偏离该指标一定程度系统将进行提醒",
+      // description: "眼睛到屏幕的距离标准值，偏离该指标一定程度系统将进行提醒",
+      description: "偏移阈值，该指标用于调节提醒的灵敏度，越大越灵敏",
       // min: 20,
       // max: 100,
       // step: 1,

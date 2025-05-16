@@ -24,7 +24,7 @@ const Camera = () => {
   const playRef = useRef(false);
   const [session, setSession] = useState<InferenceSession | null>(null);
   const sessionRef = useRef<InferenceSession | null>(null);
-  const { userSettings, setUserSettings } = useStore();
+  const { userSettings } = useStore();
 
 
   // const [eyeWidth, eyeHeight] = [10, 10]; // TODO :临时的坐标差值骇值
@@ -93,14 +93,23 @@ const Camera = () => {
 
       // 直接传递处理后的张量数据
       const result = await analyze_video(inputTensor, session);
-      console.log("分析结果:", result.position);
+      console.log("分析结果:", result.position,userSettings);
 
       const position = result.position;
 
-      // const response = await postPicture(blob);
-
-      // const data = Math.random();
-      if (Math.abs(userSettings.yawThreshold - position.yaw) > 5) {
+      if (Math.abs(userSettings.rollThreshold - position.roll)>12) {
+        userSettings.useSound && playSound();
+        message.info({
+          content: (
+            <span>
+              ⚠️🐢
+              小龟提醒：检测到头部侧倾啦！端正坐姿可以保护我们的小颈椎哟～😊ﾉ
+            </span>
+          ),
+          style: { color: "#51cf66" },
+        });
+      }
+      else if (Math.abs(userSettings.yawThreshold - position.yaw)>12) {
         userSettings.useSound && playSound();
         message.info({
           content: (
@@ -111,7 +120,7 @@ const Camera = () => {
           ),
           style: { color: "#ff6b6b" },
         });
-      } else if (Math.abs(userSettings.pitchThreshold - position.pitch) > 5) {
+      } else if (Math.abs(userSettings.pitchThreshold - position.pitch)>15) {
         userSettings.useSound && playSound();
         message.info({
           content: (
@@ -120,17 +129,6 @@ const Camera = () => {
             </span>
           ),
           style: { color: "#ff922b" },
-        });
-      } else if (Math.abs(userSettings.rollThreshold - position.roll) > 5) {
-        userSettings.useSound && playSound();
-        message.info({
-          content: (
-            <span>
-              ⚠️🐢
-              小龟提醒：检测到头部侧倾啦！端正坐姿可以保护我们的小颈椎哟～😊ﾉ
-            </span>
-          ),
-          style: { color: "#51cf66" },
         });
       }
 
