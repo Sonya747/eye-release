@@ -126,7 +126,8 @@ const Camera = () => {
         message.info({
           content: (
             <span>
-              🐢 安全距离警报！太靠近屏幕会让小龟都紧张啦～ 后退一点点吧😄
+              ⚠️🐢
+              小龟提醒：检测到头部侧倾啦！端正坐姿可以保护我们的小颈椎哟～😊ﾉ
             </span>
           ),
           style: { color: "#51cf66" },
