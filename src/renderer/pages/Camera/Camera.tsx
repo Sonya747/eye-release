@@ -114,13 +114,12 @@ const Camera = () => {
         message.info({
           content: (
             <span>
-              ⚠️🐢
-              小龟提醒：检测到头部侧倾啦！端正坐姿可以保护我们的小颈椎哟～😊ﾉ
+              🦒长颈鹿提醒：低头太久脖子会累哦，快来和我一起抬头挺胸吧～😊ﾉ
             </span>
           ),
           style: { color: "#ff6b6b" },
         });
-      } else if (Math.abs(userSettings.pitchThreshold - position.pitch)>15) {
+      } else if (Math.abs(position.yaw + position.pitch)-Math.abs(userSettings.yawThreshold+userSettings.pitchThreshold)>20) {
         userSettings.useSound && playSound();
         message.info({
           content: (
