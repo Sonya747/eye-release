@@ -21,6 +21,8 @@ const createWindow = () => {
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       nodeIntegration: true,
+      allowRunningInsecureContent: true,
+      autoplayPolicy: 'no-user-gesture-required',
 
       // Context Isolation means that preload scripts are isolated from
       // the renderer's main world to avoid leaking any privileged APIs
