@@ -1,3 +1,6 @@
+/**
+ * 补充onnxruntime-web库的typescript类型定义
+ */
 declare module 'onnxruntime-web' {
   export interface InferenceSession {
     inputNames: string[];
@@ -12,11 +15,6 @@ declare module 'onnxruntime-web' {
       dims: number[];
       type: string;
     }>;
-            // prepare feeds. use model input names as keys.
-            // const feeds = { a: tensorA, b: tensorB };
-
-            // // feed inputs and run
-            // const results = await session.run(feeds);
     run(feeds: any): Promise<any>;
   }
 
@@ -28,9 +26,9 @@ declare module 'onnxruntime-web' {
 
   export namespace InferenceSession {
     interface SessionOptions {
-      enableCpuMemArena?:boolean;
-      enableMemPattern?:boolean;
-      enableProfiling?:boolean;
+      enableCpuMemArena?: boolean;
+      enableMemPattern?: boolean;
+      enableProfiling?: boolean;
       executionMode?: 'parallel' | 'sequential';
       executionProviders?: string[];
       graphOptimizationLevel?: 'disabled' | 'basic' | 'extended' | 'all';

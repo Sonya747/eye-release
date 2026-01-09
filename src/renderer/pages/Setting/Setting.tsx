@@ -15,11 +15,10 @@ import { ExclamationCircleOutlined, LoadingOutlined } from "@ant-design/icons";
 import { useEffect, useRef, useState } from "react"; // 新增状态管理
 import "./index.css";
 // import useStore from "src/renderer/store";
-import useStore from "../../store";
+import userSettingStore from "../../store";
 import { analyze_video, loadSession } from "../../backend";
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore
-import modelPath from '../../assets/models/head.onnx';
+//@ts-ignore
+import modelPath from '@/assets/models/resnet34.onnx';
 
 const { Option } = Select;
 
@@ -31,6 +30,38 @@ export interface SettingData {
   yawThreshold: number;
   distance: number;
 }
+// 参数配置
+const params = [
+  {
+    label: "声音提醒",
+    value: "useSound" as const,
+    description: "开启或关闭声音提醒功能",
+    options: [
+      { label: "开启", value: true },
+      { label: "关闭", value: false },
+    ],
+  },
+  {
+    label: "前后倾斜标准值",
+    value: "rollThreshold" as const,
+    description: "头部前后倾斜的提醒标准值，偏离该指标一定程度系统将进行提醒",
+  },
+  {
+    label: "左右倾斜标准值",
+    value: "pitchThreshold" as const,
+    description: "头部左右倾斜的提醒标准值，偏离该指标一定程度系统将进行提醒",
+  },
+  {
+    label: "左右转动标准值",
+    value: "yawThreshold" as const,
+    description: "头部左右转动的提醒标准值，偏离该指标一定程度系统将进行提醒",
+  },
+  {
+    label: "偏移阈值",
+    value: "distance" as const,
+    description: "偏移阈值，该指标用于调节提醒的灵敏度，越大越灵敏",
+  },
+];
 
 const Setting = () => {
   const [form] = Form.useForm<SettingData>();
@@ -40,7 +71,7 @@ const Setting = () => {
   const [modalloading, setmodalLoading] = useState(true);
   const videoRef = useRef(null);
   const mediaStreamRef = useRef(null);
-  const { userSettings, setUserSettings } = useStore();
+  const { setUserSettings, loadSettings } = userSettingStore();
   // 初始化摄像头
   const initCamera = async () => {
     try {
@@ -127,67 +158,20 @@ const Setting = () => {
       mediaStreamRef.current.getTracks().forEach((track) => track.stop());
     }
   };
-  // 参数配置与后端字段对齐
-  const params = [
-    {
-      label: "声音提醒",
-      value: "useSound" as const,
-      description: "开启或关闭声音提醒功能",
-      options: [
-        { label: "开启", value: true },
-        { label: "关闭", value: false },
-      ],
-    },
-    {
-      label: "前后倾斜标准值",
-      value: "rollThreshold" as const,
-      description: "头部前后倾斜的提醒标准值，偏离该指标一定程度系统将进行提醒",
-      // min: 0,
-      // max: 90,
-      // step: 1,
-    },
-    {
-      label: "左右倾斜标准值",
-      value: "pitchThreshold" as const,
-      description: "头部左右倾斜的提醒标准值，偏离该指标一定程度系统将进行提醒",
-      // min: 0,
-      // max: 90,
-      // step: 1,
-    },
-    {
-      label: "左右转动标准值",
-      value: "yawThreshold" as const,
-      description: "头部左右转动的提醒标准值，偏离该指标一定程度系统将进行提醒",
-      // min: 0,
-      // max: 90,
-      // step: 1,
-    },
-    {
-      // label: "距离标准值",
-      label: "偏移阈值",
-      value: "distance" as const,
-      // description: "眼睛到屏幕的距离标准值，偏离该指标一定程度系统将进行提醒",
-      description: "偏移阈值，该指标用于调节提醒的灵敏度，越大越灵敏",
-      // min: 20,
-      // max: 100,
-      // step: 1,
-    },
-  ];
 
-  // 初始化数据获取
+  // 初始设置获取
   useEffect(() => {
     const fetchSettings = async () => {
       setLoading(true);
       try {
-        const initSettings = userSettings;
+        const initSettings = await loadSettings();
         form.setFieldValue("useSound", initSettings.useSound);
         form.setFieldValue("rollThreshold", initSettings.rollThreshold);
         form.setFieldValue("pitchThreshold", initSettings.pitchThreshold);
         form.setFieldValue("yawThreshold", initSettings.yawThreshold);
         form.setFieldValue("distance", initSettings.distance);
-        // if (!response.ok) throw new Error('No settings');
       } catch (error) {
-        console.log("使用默认设置", error);
+        console.log("获取设置失败",error);
       } finally {
         setLoading(false);
       }

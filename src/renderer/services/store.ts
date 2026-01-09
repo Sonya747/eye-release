@@ -1,13 +1,5 @@
 import type { Settings } from '../../main/services/store';
 
-// 定义设置的类型
-export interface Settings {
-  useSound: boolean;
-  rollThreshold: number;
-  pitchThreshold: number;
-  yawThreshold: number;
-  distance: number;
-}
 
 // 默认设置
 const defaultSettings: Settings = {
@@ -40,7 +32,7 @@ export const saveSettings = async (settings: Settings): Promise<void> => {
 };
 
 // 监听设置变化
-export const onSettingsChange = (callback: (newValue: Settings, oldValue: Settings) => void) => {
+export const onSettingsChange = (callback: (event:any,data:{newValue: Settings, oldValue: Settings}) => void) => {
   return window.electron.settings.onChanged(callback);
 };
 

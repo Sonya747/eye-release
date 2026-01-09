@@ -33,6 +33,25 @@ contextBridge.exposeInMainWorld("electron", {
       };
     },
   },
+
+  // Database API
+  database: {
+    screen: {
+      get: (startDate: string, endDate: string) => ipcRenderer.invoke("database:screen:get", startDate, endDate),
+      insert: (data: any[]) => ipcRenderer.invoke("database:screen:insert", data),
+      has: (startDate: string, endDate: string) => ipcRenderer.invoke("database:screen:has", startDate, endDate),
+    },
+    alert: {
+      get: (startDate: string, endDate: string) => ipcRenderer.invoke("database:alert:get", startDate, endDate),
+      insert: (data: any[]) => ipcRenderer.invoke("database:alert:insert", data),
+      has: (startDate: string, endDate: string) => ipcRenderer.invoke("database:alert:has", startDate, endDate),
+    },
+    posture: {
+      get: (startDate: string, endDate: string) => ipcRenderer.invoke("database:posture:get", startDate, endDate),
+      insert: (data: any[]) => ipcRenderer.invoke("database:posture:insert", data),
+      has: (startDate: string, endDate: string) => ipcRenderer.invoke("database:posture:has", startDate, endDate),
+    },
+  },
 });
 
 contextBridge.exposeInMainWorld("node", {

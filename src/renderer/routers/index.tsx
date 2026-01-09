@@ -18,6 +18,7 @@ export interface RouteProp extends NonIndexRouteObject {
   children?: RouteProp[];
 }
 
+//路由，对应左侧导航菜单
 export const routes: RouteProp[] = [
   {
     path: "/",

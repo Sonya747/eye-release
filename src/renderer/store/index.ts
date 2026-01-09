@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import storeService, { Settings } from '../services/store';
+import { message } from 'antd';
 
 // 默认设置
 const defaultSettings = {
@@ -10,33 +11,18 @@ const defaultSettings = {
   distance: 100,
 };
 
-// 从数据库加载设置
-const loadSettings = async () => {
-  try {
-    const savedSettings = await window.electron.settings.get();
-    return savedSettings || defaultSettings;
-  } catch (error) {
-    console.error('Error loading settings:', error);
-    return defaultSettings;
-  }
-};
 
 interface StoreState {
   userSettings: Settings;
+  loadSettings: () => Promise<Settings>;
   setUserSettings: (settings: Settings) => Promise<void>;
 }
 
-const useStore = create<StoreState>((set) => ({
+const userSettingStore = create<StoreState>((set) => ({
   // 初始使用默认设置
-  userSettings: {
-    useSound: true,
-    rollThreshold: 10,
-    pitchThreshold: 20,
-    yawThreshold: 10,
-    distance: 100,
-  },
-  
-  // 更新设置
+  userSettings: defaultSettings,
+
+  // 更新设置到全局store
   setUserSettings: async (settings) => {
     try {
       await storeService.saveSettings(settings);
@@ -46,16 +32,36 @@ const useStore = create<StoreState>((set) => ({
       throw error;
     }
   },
+  // 从数据库加载到状态
+  loadSettings: async () => {
+    try {
+      const savedSettings = await window.electron.settings.get();
+      if (savedSettings) {
+        set({ userSettings: savedSettings });
+        console.log(savedSettings)
+        return savedSettings;
+      } else {
+        // 如果数据库中没有设置，则新建一个默认设置
+        set({ userSettings: defaultSettings });
+        await storeService.saveSettings(defaultSettings);
+        return defaultSettings;
+      }
+    } catch (error) {
+      console.error('Error loading settings:', error);
+      message.error('Error loading settings:', error);
+      return defaultSettings;
+    }
+  },
 }));
 
 // 初始化时加载设置
 storeService.getSettings().then((settings) => {
-  useStore.setState({ userSettings: settings });
+  userSettingStore.setState({ userSettings: settings });
 });
 
 // 监听设置变化
 storeService.onSettingsChange((newValue) => {
-  useStore.setState({ userSettings: newValue });
+  userSettingStore.setState({ userSettings: newValue });
 });
 
-export default useStore;
+export default userSettingStore;
