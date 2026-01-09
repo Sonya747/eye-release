@@ -11,6 +11,9 @@
     "outDir": "dist",
     "moduleResolution": "node",
     "resolveJsonModule": true,
+    "paths": {
+      "@/*": ["src/renderer/*"]
+    },
 
     // added specifically for React
     "jsx": "react-jsx",

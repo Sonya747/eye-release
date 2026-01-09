@@ -5,6 +5,17 @@ import {
 } from "./functions/electron/dialog";
 import { isAFile, isDirectory } from "./functions/node/fileSystem";
 import { getSettings, saveSettings, onSettingsChange, type Settings } from "./services/store";
+import {
+  getScreenData,
+  insertScreenData,
+  hasScreenData,
+  getAlertData,
+  insertAlertData,
+  hasAlertData,
+  getPostureData,
+  insertPostureData,
+  hasPostureData,
+} from "./services/database";
 
 // Wraps the 'main' process functions into a function that accepts electron
 //  events of the type IpcMainInvokeEvent while allowing inputs from the
@@ -58,5 +69,94 @@ export default function ipcHandler(mainWindow: Electron.BrowserWindow) {
     }
   }).catch(error => {
     console.error('Error setting up settings change listener:', error);
+  });
+
+  //注册 IPC 处理器 
+  //为三个数据类型的数据库操作注册 IPC handlers
+  //支持 get、insert、has
+
+  ipcMain.handle("database:screen:get", async (_, startDate: string, endDate: string) => {
+    try {
+      return getScreenData(startDate, endDate);
+    } catch (error) {
+      console.error('Error getting screen data:', error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle("database:screen:insert", async (_, data: any[]) => {
+    try {
+      insertScreenData(data);
+      return true;
+    } catch (error) {
+      console.error('Error inserting screen data:', error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle("database:screen:has", async (_, startDate: string, endDate: string) => {
+    try {
+      return hasScreenData(startDate, endDate);
+    } catch (error) {
+      console.error('Error checking screen data:', error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle("database:alert:get", async (_, startDate: string, endDate: string) => {
+    try {
+      return getAlertData(startDate, endDate);
+    } catch (error) {
+      console.error('Error getting alert data:', error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle("database:alert:insert", async (_, data: any[]) => {
+    try {
+      insertAlertData(data);
+      return true;
+    } catch (error) {
+      console.error('Error inserting alert data:', error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle("database:alert:has", async (_, startDate: string, endDate: string) => {
+    try {
+      return hasAlertData(startDate, endDate);
+    } catch (error) {
+      console.error('Error checking alert data:', error);
+      throw error;
+    }
+  });
+
+  // IPC communication - database: posture metrics
+  ipcMain.handle("database:posture:get", async (_, startDate: string, endDate: string) => {
+    try {
+      return getPostureData(startDate, endDate);
+    } catch (error) {
+      console.error('Error getting posture data:', error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle("database:posture:insert", async (_, data: any[]) => {
+    try {
+      insertPostureData(data);
+      return true;
+    } catch (error) {
+      console.error('Error inserting posture data:', error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle("database:posture:has", async (_, startDate: string, endDate: string) => {
+    try {
+      return hasPostureData(startDate, endDate);
+    } catch (error) {
+      console.error('Error checking posture data:', error);
+      throw error;
+    }
   });
 }
