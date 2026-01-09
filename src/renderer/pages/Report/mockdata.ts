@@ -195,29 +195,78 @@ const mockRequest = <T>(data: T): Promise<T> =>
     )
   );
 
-export const fetchScreenData = (
+export const fetchScreenData = async (
   timeRange: [dayjs.Dayjs, dayjs.Dayjs]
 ): Promise<ScreenSessionData[]> => {
   const { adjustedStart, adjustedEnd } = adjustTimeRange(timeRange);
+  const startDate = adjustedStart.format("YYYY-MM-DD");
+  const endDate = adjustedEnd.format("YYYY-MM-DD");
+  
+  // 检查数据库中是否有数据
+  const hasData = await window.electron.database.screen.has(startDate, endDate);
+  
+  if (hasData) {
+    // 如果数据库中有数据，直接返回
+    return mockRequest(await window.electron.database.screen.get(startDate, endDate));
+  }
+  
+  // 如果没有数据，生成 mock 数据
   const days = adjustedEnd.diff(adjustedStart, 'day') + 1;
-  return mockRequest(generateScreenData(days, adjustedStart));
+  const mockData = generateScreenData(days, adjustedStart);
+  
+  // 存储到数据库
+  await window.electron.database.screen.insert(mockData);
+  
+  return mockRequest(mockData);
 };
 
 
-export const fetchAlertData = (
+export const fetchAlertData = async (
   timeRange: [dayjs.Dayjs, dayjs.Dayjs]
 ): Promise<AlertCorrelation[]> => {
   const { adjustedStart, adjustedEnd } = adjustTimeRange(timeRange);
+  const startDate = adjustedStart.format("YYYY-MM-DD");
+  const endDate = adjustedEnd.format("YYYY-MM-DD");
+  
+  // 检查数据库中是否有数据
+  const hasData = await window.electron.database.alert.has(startDate, endDate);
+  
+  if (hasData) {
+    // 如果数据库中有数据，直接返回
+    return mockRequest(await window.electron.database.alert.get(startDate, endDate));
+  }
+  
+  // 如果没有数据，生成 mock 数据
   const days = adjustedEnd.diff(adjustedStart, 'day') + 1;
-  return mockRequest(generateAlertData(days, adjustedStart));
+  const mockData = generateAlertData(days, adjustedStart);
+  
+  // 存储到数据库
+  await window.electron.database.alert.insert(mockData);
+  
+  return mockRequest(mockData);
 };
 
 // API请求函数修改
-export const fetchPostureData = (
+export const fetchPostureData = async (
   timeRange: [dayjs.Dayjs, dayjs.Dayjs]
 ): Promise<DailyPostureMetric[]> => {
   const { adjustedStart, adjustedEnd } = adjustTimeRange(timeRange);
-  return mockRequest(
-    generateDailyPostureData(adjustedStart, adjustedEnd)
-  );
+  const startDate = adjustedStart.format("YYYY-MM-DD");
+  const endDate = adjustedEnd.format("YYYY-MM-DD");
+  
+  // 检查数据库中是否有数据
+  const hasData = await window.electron.database.posture.has(startDate, endDate);
+  
+  if (hasData) {
+    // 如果数据库中有数据，直接返回
+    return mockRequest(await window.electron.database.posture.get(startDate, endDate));
+  }
+  
+  // 如果没有数据，生成 mock 数据
+  const mockData = generateDailyPostureData(adjustedStart, adjustedEnd);
+  
+  // 存储到数据库
+  await window.electron.database.posture.insert(mockData);
+  
+  return mockRequest(mockData);
 };

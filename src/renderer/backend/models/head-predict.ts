@@ -6,15 +6,7 @@ import { InferenceSession, Tensor } from 'onnxruntime-web';
 import * as ort from 'onnxruntime-web';
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
-import modelPath from '../../assets/models/head.onnx';
-
-// 打印模型路径信息
-console.log("模型文件路径:", {
-  importPath: modelPath,
-  type: typeof modelPath,
-  isString: typeof modelPath === 'string',
-  length: typeof modelPath === 'string' ? modelPath.length : 0
-});
+import modelPath from '@/assets/models/resnet34.onnx';
 
 interface PosePredictions {
   yaw: number;
@@ -31,48 +23,6 @@ const classInfo = {
 };
 
 const axes = ['yaw', 'pitch', 'roll'] as const;
-
-// Initialize ONNX Runtime WASM
-// const initOrt = async () => {
-//   try {
-//     // Set the WASM path using the correct method
-//     env.wasm.wasmPaths = {
-//       'ort-wasm-simd-threaded.wasm': '/node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.wasm'
-//     };
-//     console.log("ONNX Runtime WASM paths configured");
-//   } catch (error) {
-//     console.error("Failed to initialize ONNX Runtime WASM:", error);
-//     throw error;
-//   }
-// };
-
-// Add helper function for tensor resizing
-function resizeTensor(input: Float32Array, fromHeight: number, fromWidth: number, toHeight: number, toWidth: number): Float32Array {
-  const channels = 3;
-  const output = new Float32Array(channels * toHeight * toWidth);
-  
-  // Calculate scaling factors
-  const scaleX = fromWidth / toWidth;
-  const scaleY = fromHeight / toHeight;
-  
-  // For each output pixel
-  for (let c = 0; c < channels; c++) {
-    for (let y = 0; y < toHeight; y++) {
-      for (let x = 0; x < toWidth; x++) {
-        // Calculate corresponding position in input
-        const srcX = Math.floor(x * scaleX);
-        const srcY = Math.floor(y * scaleY);
-        
-        // Get input pixel value
-        const inputIndex = c * fromHeight * fromWidth + srcY * fromWidth + srcX;
-        const outputIndex = c * toHeight * toWidth + y * toWidth + x;
-        output[outputIndex] = input[inputIndex];
-      }
-    }
-  }
-  
-  return output;
-}
 
 // 加载模型
 export async function loadModel(modelPath: string): Promise<InferenceSession> {
@@ -119,19 +69,7 @@ async function predictPose(
 ): Promise<PosePredictions> {
   try {
     // Resize input tensor from 224x224 to 320x320
-    // const resizedData = resizeTensor(inputTensor, 224, 224, 320, 320);
-    
-    // Create input tensor with model's expected dimensions
     const tensor = new Tensor('float32', inputTensor, [1, 3, 320, 320]);
-    
-    // console.log("Created input tensor:", {
-    //   shape: tensor.dims,
-    //   type: tensor.type,
-    //   dataLength: tensor.data.length,
-    //   expectedLength: 1 * 3 * 320 * 320,
-    //   // Log a few sample values to verify normalization
-    //   sampleValues: Array.from(tensor.data.slice(0, 5)).map(v => v.toFixed(3))
-    // });
     
     // 运行推理
     const results = await session.run({ input: tensor });
@@ -163,6 +101,7 @@ async function predictPose(
       
       predictions.push(degrees);
     }
+    console.log(predictions)
     // 返回结果
     return {
       yaw: predictions[0],
@@ -178,9 +117,6 @@ async function predictPose(
 // 组合函数
 export async function processImage(inputTensor: Float32Array, session: InferenceSession): Promise<PosePredictions> {
   try {
-    // 加载模型
-    // const session = await loadModel(modelPath);
-    
     // 直接使用预处理后的张量数据进行预测
     const posePredictions = await predictPose(session, inputTensor);
     

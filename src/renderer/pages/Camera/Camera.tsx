@@ -6,6 +6,7 @@ import useSound from "use-sound";
 import sound from "../../assets/audio/notification.wav";
 // import { EyeState } from "../../api/types";
 // import { endSession, startSession } from "../../api/usage";
+// import { analyze_video } from "@/backend";
 // import {  postPicture } from "../../api/video";
 
 const Camera = () => {
@@ -43,17 +44,17 @@ const Camera = () => {
     context.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
 
     try {
-      // const blob = await new Promise<Blob>((resolve) => {
-      //   canvas.toBlob(
-      //     (blob) => {
-      //       if (blob) resolve(blob);
-      //     },
-      //     "image/jpeg",
-      //     0.7
-      //   );
-      // });
+      const blob = await new Promise<Blob>((resolve) => {
+        canvas.toBlob(
+          (blob) => {
+            if (blob) resolve(blob);
+          },
+          "image/jpeg",
+          0.7
+        );
+      });
 
-      // const response = await postPicture(blob);
+
 
       const data = Math.random()
       if(data>0.5) {
