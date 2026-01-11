@@ -132,8 +132,7 @@ const Setting = () => {
         }
       }
       // 直接传递处理后的张量数据 
-      const result = await analyze_video(inputTensor, session);
-      const position = result.position;
+      const position = await analyze_video(inputTensor, session);
       console.log("校准结果", position)
       form.setFieldValue("pitchThreshold", position.pitch);
       form.setFieldValue("rollThreshold", position.roll);

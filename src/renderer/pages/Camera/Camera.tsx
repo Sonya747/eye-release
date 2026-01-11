@@ -4,6 +4,11 @@ import "./index.css";
 import { message } from "antd";
 import useSound from "use-sound";
 import sound from "../../assets/audio/notification.wav";
+import { analyze_video, loadSession } from "@/backend";
+//@ts-ignore
+import modelPath from '@/assets/models/resnet34.onnx';
+import { InferenceSession } from "onnxruntime-web/all";
+
 // import { EyeState } from "../../api/types";
 // import { endSession, startSession } from "../../api/usage";
 // import { analyze_video } from "@/backend";
@@ -16,68 +21,61 @@ const Camera = () => {
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const [playSound] = useSound(sound, { volume: 0.5 });
   const playRef = useRef(false)
+  const session = useRef<InferenceSession>()
 
   // const [eyeWidth, eyeHeight] = [10, 10]; // TODO :临时的坐标差值骇值
 
+  //卸载释放定时器和session
   useEffect(() => {
-    if (!isCameraOn) {
-      stopCamera();
-      return;
-    }
-
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
       }
+      session.current = null
     };
-  }, [isCameraOn]);
+  }, []);
 
   const analyzeFrame = async () => {
-    if (!videoRef.current) return;
+    if (!videoRef.current || !session.current) {
+      message.error("摄像头调用失败或模型加载失败，请重试")
+      return Promise.reject();
+    }
 
     const canvas = document.createElement("canvas");
     const context = canvas.getContext("2d");
     if (!context) return;
-
-    canvas.width = videoRef.current.videoWidth;
-    canvas.height = videoRef.current.videoHeight;
-    context.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
-
     try {
-      const blob = await new Promise<Blob>((resolve) => {
-        canvas.toBlob(
-          (blob) => {
-            if (blob) resolve(blob);
-          },
-          "image/jpeg",
-          0.7
-        );
-      });
+      // 设置 canvas 尺寸为模型输入尺寸
+      canvas.width = 320;
+      canvas.height = 320;
+      context.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+      // 获取图像数据并直接转换为模型输入格式
+      const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+      const data = imageData.data;
+      const inputTensor = new Float32Array(1 * 3 * canvas.width * canvas.height);
+      for (let c = 0; c < 3; c++) {
+        for (let h = 0; h < canvas.height; h++) {
+          for (let w = 0; w < canvas.width; w++) {
+            const idx = (h * canvas.width + w) * 4 + c;
+            const normalizedValue = data[idx] / 255.0;
+            inputTensor[c * canvas.width * canvas.height + h * canvas.width + w] = normalizedValue;
+          }
+        }
+      }
+      // 直接传递处理后的张量数据 
+      const position = await analyze_video(inputTensor, session.current);
+      console.log("模型结果", position)
 
-
-
-      const data = Math.random()
-      if(data>0.5) {
-        playSound(); //TODO 读取设置
-        message.info("头部倾斜")
+    } catch {
+      (e) => {
+        console.log("分析失败", e)
+      }
     }
-      
-      // console.log("分析结果:", data,data.position);
-      // if(data>0.5) {
-      //   //TODO 眼睛处理
-      // }
-      // if(Math.abs(data.position.pitch)>10){
-      //   playSound(); //TODO 读取设置
-      //   message.info("头部倾斜")
-      // }
-    } catch (error) {
-      console.error("分析失败:", error);
-    }
-  };
+  }
 
   const stopCamera = async () => {
     if (stream && isCameraOn) {
-      playRef.current=false
+      playRef.current = false
       stream.getTracks().forEach((track) => track.stop());
       setStream(null);
       setIsCameraOn(false);
@@ -85,6 +83,7 @@ const Camera = () => {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
+      session.current = null
       // const res = await endSession();
       message.info("监测模式结束");
       // console.log("endSession", res);
@@ -92,8 +91,8 @@ const Camera = () => {
   };
 
   const startCamera = async () => {
-    if(isCameraOn&&!stream) return;
-    if(playRef.current) return;
+    if (isCameraOn && !stream) return;
+    if (playRef.current) return;
     playRef.current = true
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
@@ -102,13 +101,20 @@ const Camera = () => {
         videoRef.current.srcObject = stream;
       }
       setIsCameraOn(true);
-      // const res = await startSession();
-      // console.log("startSession", res);
       message.success("检测模式开启");
       // 设置定时器，每1s发送一帧
       intervalRef.current = setInterval(analyzeFrame, 5000);
     } catch (err) {
       console.error("video stream error", err);
+    }
+    try {
+      session.current = await loadSession(modelPath)
+
+    } catch {
+      (e) => {
+        message.error("模型加载失败")
+        console.log("模型加载失败", e)
+      }
     }
   };
 
@@ -141,9 +147,8 @@ const Camera = () => {
         <video
           ref={videoRef}
           autoPlay
-          className={`video-element ${
-            isCameraOn ? "connected" : "disconnected"
-          }`}
+          className={`video-element ${isCameraOn ? "connected" : "disconnected"
+            }`}
           style={{
             width: "100%",
             height: "100%",
@@ -154,7 +159,7 @@ const Camera = () => {
           }}
           onCanPlay={handleVideoConnect}
           onClick={isCameraOn ? stopCamera : startCamera}
-          onDoubleClick={()=>{}}
+          onDoubleClick={() => { }}
         />
 
         {/* 状态指示层 */}
@@ -174,9 +179,8 @@ const Camera = () => {
               height: 12,
               borderRadius: "50%",
               background: isCameraOn ? "#52c41a" : "#ff4d4f",
-              boxShadow: `0 0 8px ${
-                isCameraOn ? "rgba(82, 196, 26, 0.4)" : "rgba(255, 77, 79, 0.4)"
-              }`,
+              boxShadow: `0 0 8px ${isCameraOn ? "rgba(82, 196, 26, 0.4)" : "rgba(255, 77, 79, 0.4)"
+                }`,
               animation: "breathing 1.5s infinite",
             }}
           />
@@ -207,7 +211,7 @@ const Camera = () => {
             //   transform: 'translate(-50%, -50%) scale(1.1)'
             // }
           }}
-          // onClick={isCameraOn ? stopCamera : startCamera}
+        // onClick={isCameraOn ? stopCamera : startCamera}
         ></div>
 
         {/* 未连接时的占位符 */}

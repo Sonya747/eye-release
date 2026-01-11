@@ -1,12 +1,7 @@
-import { InferenceSession, Tensor } from 'onnxruntime-web';
-// import path from 'path';
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore
-// eslint-disable-next-line import/namespace
-import * as ort from 'onnxruntime-web';
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// import { InferenceSession, Tensor } from 'onnxruntime-web';
 // @ts-ignore
 import modelPath from '@/assets/models/resnet34.onnx';
+import { InferenceSession, Tensor } from 'onnxruntime-web/all';
 
 interface PosePredictions {
   yaw: number;
@@ -62,8 +57,8 @@ export async function loadModel(modelPath: string): Promise<InferenceSession> {
   }
 }
 
-// 预测姿态
-async function predictPose(
+// 检测姿态
+export async function predictPose(
   session: InferenceSession,
   inputTensor: Float32Array
 ): Promise<PosePredictions> {
@@ -101,7 +96,6 @@ async function predictPose(
       
       predictions.push(degrees);
     }
-    console.log(predictions)
     // 返回结果
     return {
       yaw: predictions[0],
@@ -110,19 +104,6 @@ async function predictPose(
     };
   } catch (error) {
     console.error("预测过程出错:", error);
-    throw error;
-  }
-}
-
-// 组合函数
-export async function processImage(inputTensor: Float32Array, session: InferenceSession): Promise<PosePredictions> {
-  try {
-    // 直接使用预处理后的张量数据进行预测
-    const posePredictions = await predictPose(session, inputTensor);
-    
-    return posePredictions;
-  } catch (error) {
-    console.error("模型推理失败:", error);
     throw error;
   }
 }

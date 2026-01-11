@@ -1,15 +1,19 @@
 import { InferenceSession } from "onnxruntime-web";
-import { analyzeVideoFrame } from "./models/analyze";
-import { loadModel } from "./models/head-predict";
+import { loadModel, predictPose } from "./models/head-predict";
 /**
  * 分析图像数据
  * @param frameData 图像数据
  * @param session 推理会话
  * @returns 分析结果
  */
-export const analyze_video = async (frameData: Float32Array,session: InferenceSession) => {
-  const result = await analyzeVideoFrame(frameData,session);
-  return result;
+export const analyze_video = async (frameData: Float32Array, session: InferenceSession) => {
+  try {
+    const positionResult = await predictPose(session, frameData);
+    // 返回分析结果
+    return positionResult
+  } catch (error) {
+    console.error("分析失败:", error);
+  }
 };
 
 /**
