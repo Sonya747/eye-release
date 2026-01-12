@@ -100,6 +100,7 @@ const Setting = () => {
       const session = await loadSession(modelPath);
       // 等待摄像头初始化完成
       if (!videoRef.current?.srcObject) {
+        message.error("摄像头调用失败")
         throw new Error("视频流未正确初始化");
       }
       const canvas = document.createElement("canvas");
