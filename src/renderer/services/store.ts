@@ -1,13 +1,16 @@
 import type { Settings } from '../../main/services/store';
 
-
+/**
+ * 这里由于历史遗留，字段命名和前端状态src/renderer/store/index.ts中不一致
+ * 字段意义依照注释
+ */
 // 默认设置
 const defaultSettings: Settings = {
-  useSound: true,
-  rollThreshold: 10,
-  pitchThreshold: 20,
-  yawThreshold: 10,
-  distance: 100,
+  useSound: true, //是否使用声音提示
+  rollStandard: 10, //标准roll角度
+  pitchStandard: 20, //标准pitch角度
+  yawStandard: 10, //标准yaw角度
+  sensitivity: 0.5, //偏移灵敏度
 };
 
 // 获取设置

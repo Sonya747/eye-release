@@ -1,21 +1,25 @@
 import type { BrowserWindow } from 'electron';
 
+/**
+ * 这里由于历史遗留，字段命名和前端状态src/renderer/store/index.ts中不一致
+ * 字段意义依照注释
+ */
 // 定义设置的类型
 export interface Settings {
   useSound: boolean;
-  rollThreshold: number;
-  pitchThreshold: number;
-  yawThreshold: number;
-  distance: number;
+  rollStandard: number;
+  pitchStandard: number;
+  yawStandard: number;
+  sensitivity: number;
 }
 
 // 默认设置
 const defaultSettings: Settings = {
   useSound: true,
-  rollThreshold: 10,
-  pitchThreshold: 20,
-  yawThreshold: 10,
-  distance: 100,
+  rollStandard: 10,
+  pitchStandard: 20,
+  yawStandard: 10,
+  sensitivity: 0.5,
 };
 
 let store: any = null;
@@ -30,7 +34,7 @@ const initStore = async () => {
       watch: true,
       schema: {
         useSound: { type: 'boolean', default: true },
-        rollThreshold: { type: 'number', default: 10 },
+        rollStandard: { type: 'number', default: 10 },
         pitchThreshold: { type: 'number', default: 20 },
         yawThreshold: { type: 'number', default: 10 },
         distance: { type: 'number', default: 100 },

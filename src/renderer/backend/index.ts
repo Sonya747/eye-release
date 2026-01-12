@@ -1,12 +1,12 @@
 import { InferenceSession } from "onnxruntime-web";
-import { loadModel, predictPose } from "./models/head-predict";
+import { loadModel, PosePredictions, predictPose } from "./models/head-predict";
 /**
  * 分析图像数据
  * @param frameData 图像数据
  * @param session 推理会话
  * @returns 分析结果
  */
-export const analyze_video = async (frameData: Float32Array, session: InferenceSession) => {
+export const analyze_video = async (frameData: Float32Array, session: InferenceSession):Promise<PosePredictions> => {
   try {
     const positionResult = await predictPose(session, frameData);
     // 返回分析结果

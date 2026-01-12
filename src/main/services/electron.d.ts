@@ -2,10 +2,10 @@ import type { ScreenSessionData, AlertCorrelation } from '../../renderer/pages/R
 
 interface Settings {
   useSound: boolean;
-  rollThreshold: number;
-  pitchThreshold: number;
-  yawThreshold: number;
-  distance: number;
+  rollStandard: number;
+  pitchStandard: number;
+  yawStandard: number;
+  sensitivity: number;
 }
 
 interface DailyPostureMetric {

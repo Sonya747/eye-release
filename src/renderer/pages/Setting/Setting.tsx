@@ -15,21 +15,13 @@ import { ExclamationCircleOutlined, LoadingOutlined } from "@ant-design/icons";
 import { useEffect, useRef, useState } from "react"; // 新增状态管理
 import "./index.css";
 // import useStore from "src/renderer/store";
-import userSettingStore from "../../store";
+import userSettingStore, { userSettings } from "../../store";
 import { analyze_video, loadSession } from "../../backend";
 //@ts-ignore
 import modelPath from '@/assets/models/resnet34.onnx';
 
 const { Option } = Select;
 
-// 接口定义
-export interface SettingData {
-  useSound: boolean;
-  rollThreshold: number;
-  pitchThreshold: number;
-  yawThreshold: number;
-  distance: number;
-}
 // 参数配置
 const params = [
   {
@@ -43,28 +35,28 @@ const params = [
   },
   {
     label: "前后倾斜标准值",
-    value: "rollThreshold" as const,
+    value: "rollStandard" as const,
     description: "头部前后倾斜的提醒标准值，偏离该指标一定程度系统将进行提醒",
   },
   {
     label: "左右倾斜标准值",
-    value: "pitchThreshold" as const,
+    value: "pitchStandard" as const,
     description: "头部左右倾斜的提醒标准值，偏离该指标一定程度系统将进行提醒",
   },
   {
     label: "左右转动标准值",
-    value: "yawThreshold" as const,
+    value: "yawStandard" as const,
     description: "头部左右转动的提醒标准值，偏离该指标一定程度系统将进行提醒",
   },
   {
-    label: "偏移阈值",
-    value: "distance" as const,
-    description: "偏移阈值，该指标用于调节提醒的灵敏度，越大越灵敏",
+    label: "灵敏度",
+    value: "sensitivity" as const,
+    description: "检测灵敏度，该指标用于调节提醒的灵敏度，建议设置范围0.3-1之间，越接近0灵敏",
   },
 ];
 
 const Setting = () => {
-  const [form] = Form.useForm<SettingData>();
+  const [form] = Form.useForm<userSettings>();
   const [loading, setLoading] = useState(false); // 新增加载状态
   const [submitError, setSubmitError] = useState<string | null>(null); // 新增错误状态
   const [visible, setVisible] = useState(false);
@@ -134,10 +126,9 @@ const Setting = () => {
       // 直接传递处理后的张量数据 
       const position = await analyze_video(inputTensor, session);
       console.log("校准结果", position)
-      form.setFieldValue("pitchThreshold", position.pitch);
-      form.setFieldValue("rollThreshold", position.roll);
-      form.setFieldValue("yawThreshold", position.yaw);
-      // form.setFieldValue("distance", 42); //TODO
+      form.setFieldValue("pitchStandard", position.pitch);
+      form.setFieldValue("rollStandard", position.roll);
+      form.setFieldValue("yawStandard", position.yaw);
     } catch (error) {
       message.error(error.message);
       console.error("分析失败");
@@ -165,10 +156,10 @@ const Setting = () => {
       try {
         const initSettings = await loadSettings();
         form.setFieldValue("useSound", initSettings.useSound);
-        form.setFieldValue("rollThreshold", initSettings.rollThreshold);
-        form.setFieldValue("pitchThreshold", initSettings.pitchThreshold);
-        form.setFieldValue("yawThreshold", initSettings.yawThreshold);
-        form.setFieldValue("distance", initSettings.distance);
+        form.setFieldValue("rollStandard", initSettings.rollStandard);
+        form.setFieldValue("pitchStandard", initSettings.pitchStandard);
+        form.setFieldValue("yawStandard", initSettings.yawStandard);
+        form.setFieldValue("sensitivity", initSettings.sensitivity);
       } catch (error) {
         console.log("获取设置失败",error);
       } finally {
@@ -179,7 +170,7 @@ const Setting = () => {
   }, [form]);
 
   // 表单提交
-  const onFinish = (values: SettingData) => {
+  const onFinish = (values: userSettings) => {
     setLoading(true);
     try {
       setUserSettings(values);
@@ -258,9 +249,6 @@ const Setting = () => {
               </Select>
             ) : (
               <InputNumber
-                // min={param.min}
-                // max={param.max}
-                // step={param.step}
                 size="large"
                 style={{
                   width: "100%",

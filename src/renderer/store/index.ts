@@ -1,21 +1,29 @@
 import { create } from 'zustand';
-import storeService, { Settings } from '../services/store';
+import storeService from '../services/store';
 import { message } from 'antd';
+
+export interface userSettings {
+  useSound: boolean;
+  rollStandard: number;
+  pitchStandard: number;
+  yawStandard: number;
+  sensitivity: number;
+}
 
 // 默认设置
 const defaultSettings = {
   useSound: true,
-  rollThreshold: 10,
-  pitchThreshold: 20,
-  yawThreshold: 10,
-  distance: 100,
+  rollStandard: 10,
+  pitchStandard: 20,
+  yawStandard: 10,
+  sensitivity: 0.5,
 };
 
 
 interface StoreState {
-  userSettings: Settings;
-  loadSettings: () => Promise<Settings>;
-  setUserSettings: (settings: Settings) => Promise<void>;
+  userSettings: userSettings;
+  loadSettings: () => Promise<userSettings>;
+  setUserSettings: (settings: userSettings) => Promise<void>;
 }
 
 const userSettingStore = create<StoreState>((set) => ({

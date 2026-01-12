@@ -3,7 +3,7 @@
 import modelPath from '@/assets/models/resnet34.onnx';
 import { InferenceSession, Tensor } from 'onnxruntime-web/all';
 
-interface PosePredictions {
+export interface PosePredictions {
   yaw: number;
   pitch: number;
   roll: number;

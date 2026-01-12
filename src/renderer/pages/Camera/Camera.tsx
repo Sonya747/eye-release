@@ -8,11 +8,8 @@ import { analyze_video, loadSession } from "@/backend";
 //@ts-ignore
 import modelPath from '@/assets/models/resnet34.onnx';
 import { InferenceSession } from "onnxruntime-web/all";
-
-// import { EyeState } from "../../api/types";
-// import { endSession, startSession } from "../../api/usage";
-// import { analyze_video } from "@/backend";
-// import {  postPicture } from "../../api/video";
+import userSettingStore from "@/store";
+import { PosePredictions } from "@/backend/models/head-predict";
 
 const Camera = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -22,6 +19,7 @@ const Camera = () => {
   const [playSound] = useSound(sound, { volume: 0.5 });
   const playRef = useRef(false)
   const session = useRef<InferenceSession>()
+  const { userSettings } = userSettingStore()
 
   // const [eyeWidth, eyeHeight] = [10, 10]; // TODO :临时的坐标差值骇值
 
@@ -65,6 +63,16 @@ const Camera = () => {
       // 直接传递处理后的张量数据 
       const position = await analyze_video(inputTensor, session.current);
       console.log("模型结果", position)
+
+      // 判断是否偏离标准值
+      const isDeviation = analyzePosition(position);
+      if (isDeviation) {
+        if (userSettings.useSound) {
+          playSound();
+        }
+        message.warning("检测到头部姿态偏离标准值，请调整姿势");
+
+      }
 
     } catch {
       (e) => {
@@ -125,6 +133,35 @@ const Camera = () => {
       });
     }
   };
+
+  //判断角度是否偏离超过阈值 
+  const analyzePosition = (position: PosePredictions) => {
+    // 检查 pitch (左右倾斜)
+    const pitchDeviation = Math.abs(userSettings.pitchStandard) > 0
+      ? Math.abs(position.pitch - userSettings.pitchStandard) / Math.abs(userSettings.pitchStandard)
+      : Math.abs(position.pitch - userSettings.pitchStandard);
+    if (pitchDeviation > userSettings.sensitivity) {
+      return true;
+    }
+
+    // 检查 roll (前后倾斜)
+    const rollDeviation = Math.abs(userSettings.rollStandard) > 0
+      ? Math.abs(position.roll - userSettings.rollStandard) / Math.abs(userSettings.rollStandard)
+      : Math.abs(position.roll - userSettings.rollStandard);
+    if (rollDeviation > userSettings.sensitivity) {
+      return true;
+    }
+
+    // 检查 yaw (左右转动)
+    const yawDeviation = Math.abs(userSettings.yawStandard) > 0
+      ? Math.abs(position.yaw - userSettings.yawStandard) / Math.abs(userSettings.yawStandard)
+      : Math.abs(position.yaw - userSettings.yawStandard);
+    if (yawDeviation > userSettings.sensitivity) {
+      return true;
+    }
+
+    return false;
+  }
 
   return (
     <div
