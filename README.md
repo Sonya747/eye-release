@@ -10,8 +10,10 @@ npm install --force
 npm start
 ```
 打包：
-将模型放到src/renderer/assets/models路径下，运行`npm run make`，即可生成对应操作系统的应用
-参照https://www.electronjs.org/docs/latest/tutorial/tutorial-packaging
+将模型放到src/renderer/assets/models路径下，运行`npm run make`，即可生成对应操作系统的应用到out文件夹下
+参照
+https://www.electronjs.org/docs/latest/tutorial/tutorial-packaging
+https://www.electronjs.org/zh/docs/latest/tutorial/%E6%89%93%E5%8C%85%E6%95%99%E7%A8%8B (中文)
 
 运行软件前要赋予应用访问摄像头的权利
 

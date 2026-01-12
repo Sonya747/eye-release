@@ -5,11 +5,14 @@ import { MakerDeb } from '@electron-forge/maker-deb';
 import { MakerRpm } from '@electron-forge/maker-rpm';
 import { VitePlugin } from '@electron-forge/plugin-vite';
 import { FusesPlugin } from '@electron-forge/plugin-fuses';
+//项目中使用的better-sqlite3 是原生模块，需要从 asar 中解包才能加载，AutoUnpackNativesPlugin插件自动解包原生模块
+import { AutoUnpackNativesPlugin } from '@electron-forge/plugin-auto-unpack-natives';
 import { FuseV1Options, FuseVersion } from '@electron/fuses';
 
 const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
+    ignore: [/node_modules\/(?!(better-sqlite3|bindings|file-uri-to-path)\/)/,],
   },
   rebuildConfig: {},
   makers: [
@@ -41,6 +44,9 @@ const config: ForgeConfig = {
       ],
     }),
     // Fuses are used to enable/disable various Electron functionality
+    new AutoUnpackNativesPlugin({}),
+
+    // Auto-unpack native modules like better-sqlite3 from asar archive
     // at package time, before code signing the application
     new FusesPlugin({
       version: FuseVersion.V1,
