@@ -51,6 +51,7 @@ contextBridge.exposeInMainWorld("electron", {
       insert: (data: any[]) => ipcRenderer.invoke("database:posture:insert", data),
       has: (startDate: string, endDate: string) => ipcRenderer.invoke("database:posture:has", startDate, endDate),
     },
+    reset: () => ipcRenderer.invoke("database:reset"),
   },
 });
 

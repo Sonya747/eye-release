@@ -33,7 +33,7 @@ const initDatabase = (): Database.Database => {
 
   const userDataPath = app.getPath('userData');
   const dbPath = path.join(userDataPath, 'report_data.db');
-  
+  console.log("数据库路径",dbPath)
   db = new Database(dbPath);
   
   // 启用外键约束
@@ -101,12 +101,12 @@ export const getScreenData = (startDate: string, endDate: string): ScreenSession
 
 export const insertScreenData = (data: ScreenSessionData[]): void => {
   const database = getDatabase();
-  const insert = database.prepare(`
-    INSERT OR REPLACE INTO screen_sessions (date, hourly_usage)
-    VALUES (?, ?)
-  `);
   
   const insertMany = database.transaction((items: ScreenSessionData[]) => {
+    const insert = database.prepare(`
+      INSERT OR REPLACE INTO screen_sessions (date, hourly_usage)
+      VALUES (?, ?)
+    `);
     for (const item of items) {
       insert.run(item.date, JSON.stringify(item.hourly_usage));
     }
@@ -142,12 +142,12 @@ export const getAlertData = (startDate: string, endDate: string): AlertCorrelati
 
 export const insertAlertData = (data: AlertCorrelation[]): void => {
   const database = getDatabase();
-  const insert = database.prepare(`
-    INSERT OR REPLACE INTO alert_correlations (date, total_duration_hours, alert_count)
-    VALUES (?, ?, ?)
-  `);
   
   const insertMany = database.transaction((items: AlertCorrelation[]) => {
+    const insert = database.prepare(`
+      INSERT OR REPLACE INTO alert_correlations (date, total_duration_hours, alert_count)
+      VALUES (?, ?, ?)
+    `);
     for (const item of items) {
       insert.run(item.date, item.total_duration_hours, item.alert_count);
     }
@@ -199,12 +199,12 @@ export const getPostureData = (startDate: string, endDate: string): DailyPosture
 
 export const insertPostureData = (data: DailyPostureMetric[]): void => {
   const database = getDatabase();
-  const insert = database.prepare(`
-    INSERT OR REPLACE INTO posture_metrics (date, avg_pitch, avg_yaw, avg_roll, posture_score, anomaly)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `);
   
   const insertMany = database.transaction((items: DailyPostureMetric[]) => {
+    const insert = database.prepare(`
+      INSERT OR REPLACE INTO posture_metrics (date, avg_pitch, avg_yaw, avg_roll, posture_score, anomaly)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `);
     for (const item of items) {
       insert.run(
         item.date,
@@ -230,6 +230,16 @@ export const hasPostureData = (startDate: string, endDate: string): boolean => {
   
   const result = stmt.get(startDate, endDate) as { count: number };
   return result.count > 0;
+};
+
+// 清空所有数据
+export const resetAllData = (): void => {
+  const database = getDatabase();
+  database.exec(`
+    DELETE FROM screen_sessions;
+    DELETE FROM alert_correlations;
+    DELETE FROM posture_metrics;
+  `);
 };
 
 // 关闭数据库连接

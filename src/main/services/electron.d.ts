@@ -39,6 +39,7 @@ interface ElectronAPI {
       insert: (data: DailyPostureMetric[]) => Promise<boolean>;
       has: (startDate: string, endDate: string) => Promise<boolean>;
     };
+    reset: () => Promise<boolean>;
   };
 }
 

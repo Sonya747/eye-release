@@ -4,7 +4,7 @@
 - 包管理工具npm/pnpm
 先下载依赖再用包管理工具运行start脚本即本地运行
 由于前期引入库的版本出现冲突，因此需要忽略冲突强制下载(--force)
-如果报错`electron download failed`，挂梯子或配置electron镜像源
+如果报错`electron download failed`，挂梯子或配置electron镜像源(.npmrc文件中)
 ```
 npm install --force
 npm start
@@ -72,6 +72,98 @@ Electron 应用的完整构建和打包解决方案，提供开箱即用的开�
   - 记录检测历史数据和统计信息
   - 提供持久化的本地数据存储方案
   - 支持复杂的数据查询和分析
+
+#### 数据库存储
+
+**数据库位置**
+- 数据库文件：`report_data.db`
+- 存储路径：`{用户数据目录}/report_data.db`
+  - Windows: `%APPDATA%/{应用名}/report_data.db`
+  - macOS: `~/Library/Application Support/{应用名}/report_data.db`
+  - Linux: `~/.config/{应用名}/report_data.db`
+
+**数据表结构**
+
+使用三个数据表存储监测数据：
+
+1. **screen_sessions** - 屏幕使用数据表
+   ```sql
+   CREATE TABLE screen_sessions (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     date TEXT NOT NULL UNIQUE,              -- 日期 (YYYY-MM-DD)
+     hourly_usage TEXT NOT NULL,            -- 按小时使用时长 (JSON格式: {"00": 1.5, "01": 2.0, ...})
+     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+   );
+   ```
+   - 存储每日按小时统计的屏幕使用时长
+   - `hourly_usage` 字段为 JSON 字符串，包含 24 小时的使用数据
+
+2. **alert_correlations** - 健康提醒数据表
+   ```sql
+   CREATE TABLE alert_correlations (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     date TEXT NOT NULL UNIQUE,              -- 日期 (YYYY-MM-DD)
+     total_duration_hours REAL NOT NULL,    -- 总监测时长（小时）
+     alert_count INTEGER NOT NULL,          -- 提醒次数
+     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+   );
+   ```
+   - 存储每日监测总时长和健康提醒次数
+
+3. **posture_metrics** - 姿势监测数据表
+   ```sql
+   CREATE TABLE posture_metrics (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     date TEXT NOT NULL UNIQUE,              -- 日期 (YYYY-MM-DD)
+     avg_pitch REAL NOT NULL,               -- 平均俯仰角（度）
+     avg_yaw REAL NOT NULL,                 -- 平均偏航角（度）
+     avg_roll REAL NOT NULL,                -- 平均翻滚角（度）
+     posture_score INTEGER NOT NULL,        -- 姿势评分 (0-100)
+     anomaly INTEGER DEFAULT 0,             -- 是否异常 (0/1)
+     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+   );
+   ```
+   - 存储每日平均头部姿态角度和综合评分
+   - `anomaly` 字段标记异常日（偏离次数占比 > 30%）
+
+**索引优化**
+- 所有表都在 `date` 字段上创建了索引，优化日期范围查询性能
+
+**数据收集机制**
+
+1. **实时**（Camera.tsx）
+   - 使用累加器模式收集数据，避免内存爆炸
+   - 每 5 秒采样一次头部姿态数据
+   - 累加器维护以下统计值：
+     - `pitchSum/yawSum/rollSum`: 角度累加值
+     - `sampleCount`: 样本总数
+     - `deviationCount`: 偏离次数
+     - `hourlyMinutes`: 按小时统计的监测分钟数
+
+2. **数据聚合与存储**
+   - 监测结束时（用户停止监测或应用关闭）触发数据保存
+   - 至少 1 分钟且至少 2 个样本才保存
+   - 数据聚合计算：
+     - 平均值 = 累加值 / 样本数量
+     - 姿势评分 = 基于平均值和用户设置的标准值计算（0-100）
+     - 异常判断 = 偏离次数占比 > 30%
+   - 使用 `INSERT OR REPLACE`，同一天多次监测会自动合并数据
+
+**数据查询**
+
+- **查询接口**: 通过 IPC 通信调用主进程的数据库操作函数
+- **数据展示**: Dashboard 页面优先显示真实数据，缺失日期自动填充 0 值
+
+**数据重置**
+
+- 提供"重置数据"功能，可清空所有数据库表
+- 操作：点击"重置数据"按钮 → 确认弹窗 → 清空所有数据
+
+#### mock 
+- 文件位置：`src/renderer/pages/Report/mockdata.ts`（生成/读取 mock 数据的工具）
+- 如需启用 mock：
+  - 在 `Dashboard.tsx` 中将数据加载函数改为调用 `fetchScreenData / fetchAlertData / fetchPostureData`（已在代码中用注释标明切换方式）
+  - mock 数据会按当前时间范围生成
 
 #### electron-store
 简单易用的 Electron 应用数据持久化库，基于 JSON 文件存储。

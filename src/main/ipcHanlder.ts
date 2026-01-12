@@ -15,6 +15,7 @@ import {
   getPostureData,
   insertPostureData,
   hasPostureData,
+  resetAllData,
 } from "./services/database";
 
 // Wraps the 'main' process functions into a function that accepts electron
@@ -156,6 +157,17 @@ export default function ipcHandler(mainWindow: Electron.BrowserWindow) {
       return hasPostureData(startDate, endDate);
     } catch (error) {
       console.error('Error checking posture data:', error);
+      throw error;
+    }
+  });
+
+  // 清空数据库数据
+  ipcMain.handle("database:reset", async () => {
+    try {
+      resetAllData();
+      return true;
+    } catch (error) {
+      console.error("Error resetting database:", error);
       throw error;
     }
   });

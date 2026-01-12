@@ -7,14 +7,10 @@ import {
   message,
   Spin,
   Tabs,
+  Popconfirm,
 } from "antd";
 import { Line, DualAxes } from "@ant-design/charts";
 import dayjs from "dayjs";
-// import {
-//   fetchScreenSessions,
-//   fetchPostureMetrics,
-//   fetchAlertCorrelation,
-// } from "../../api/usage";
 import type {
   ScreenSessionData,
   AlertCorrelation,
@@ -24,7 +20,7 @@ import { Typography } from "antd";
 import { AlertOutlined, DashboardOutlined, LaptopOutlined, UserOutlined } from "@ant-design/icons";
 import { Grid } from "antd";
 import { debounce } from "lodash";
-import { DailyPostureMetric, fetchAlertData, fetchPostureData, fetchScreenData } from "./mockdata";
+import { DailyPostureMetric } from "./mockdata";
 
 // 新增样式常量
 const CHART_HEIGHT = 400;
@@ -53,6 +49,76 @@ const Dashboard: React.FC = () => {
   const [alertDataState, setAlertDataState] = useState<DataState>("loading");
   const [key, setKey] = useState<string>("1");
 
+  // 构建日期列表，缺失日期返回 0/空数据
+  const buildDateList = (range: [dayjs.Dayjs, dayjs.Dayjs]) => {
+    const dates: dayjs.Dayjs[] = [];
+    let current = range[0].startOf("day");
+    const end = range[1].startOf("day");
+    while (current.isSame(end, "day") || current.isBefore(end, "day")) {
+      dates.push(current);
+      current = current.add(1, "day");
+    }
+    return dates;
+  };
+
+  // 屏幕使用数据
+  const fetchScreenDataReal = async (range: [dayjs.Dayjs, dayjs.Dayjs]) => {
+    const startDate = range[0].format("YYYY-MM-DD");
+    const endDate = range[1].format("YYYY-MM-DD");
+    const realData = await window.electron.database.screen.get(startDate, endDate);
+    const map = new Map(realData.map((d) => [d.date, d]));
+    const dateList = buildDateList(range);
+
+    return dateList.map((d) => {
+      const dateStr = d.format("YYYY-MM-DD");
+      if (map.has(dateStr)) return map.get(dateStr)!;
+      // 缺失日期返回 0 值
+      const zeroHourly = Object.fromEntries(
+        Array.from({ length: 24 }, (_, h) => [h.toString().padStart(2, "0"), 0])
+      );
+      return { date: dateStr, hourly_usage: zeroHourly };
+    });
+  };
+
+  //健康提醒数据
+  const fetchAlertDataReal = async (range: [dayjs.Dayjs, dayjs.Dayjs]) => {
+    const startDate = range[0].format("YYYY-MM-DD");
+    const endDate = range[1].format("YYYY-MM-DD");
+    const realData = await window.electron.database.alert.get(startDate, endDate);
+    const map = new Map(realData.map((d) => [d.date, d]));
+    const dateList = buildDateList(range);
+
+    return dateList.map((d) => {
+      const dateStr = d.format("YYYY-MM-DD");
+      if (map.has(dateStr)) return map.get(dateStr)!;
+      // 缺失日期返回 0 值
+      return { date: dateStr, total_duration_hours: 0, alert_count: 0 };
+    });
+  };
+
+  // 姿势数据数据
+  const fetchPostureDataReal = async (range: [dayjs.Dayjs, dayjs.Dayjs]): Promise<DailyPostureMetric[]> => {
+    const startDate = range[0].format("YYYY-MM-DD");
+    const endDate = range[1].format("YYYY-MM-DD");
+    const realData = await window.electron.database.posture.get(startDate, endDate);
+    const map = new Map(realData.map((d) => [d.date, d]));
+    const dateList = buildDateList(range);
+
+    return dateList.map((d) => {
+      const dateStr = d.format("YYYY-MM-DD");
+      if (map.has(dateStr)) return map.get(dateStr)!;
+      // 缺失日期返回 0 值
+      return {
+        date: dateStr,
+        avg_pitch: 0,
+        avg_yaw: 0,
+        avg_roll: 0,
+        posture_score: 0,
+        anomaly: false,
+      };
+    });
+  };
+
   useEffect(() => {
     switch (key) {
       case "1":
@@ -72,8 +138,8 @@ const Dashboard: React.FC = () => {
   const loadScreenData = async () => {
     setScreenDataState("loading");
     try {
-      // const screenRes = await fetchScreenSessions(dateRange[0], dateRange[1]);
-      const screenRes = await fetchScreenData(dateRange)
+      const screenRes = await fetchScreenDataReal(dateRange);
+      // 如果需要使用 mock 数据，改为：const screenRes = await fetchScreenData(dateRange);
       if (screenRes.length === 0) {
         setScreenDataState("empty");
         message.warning("屏幕使用数据为空");
@@ -90,8 +156,8 @@ const Dashboard: React.FC = () => {
   const loadPostureData = async () => {
     try {
       setPostureDataState("loading")
-      // const postureRes = await fetchPostureMetrics();
-      const postureRes = await fetchPostureData(dateRange)
+      const postureRes = await fetchPostureDataReal(dateRange);
+      // 如果需要使用 mock 数据，改为：const postureRes = await fetchPostureData(dateRange);
       if (postureRes.length === 0) {
         setPostureDataState("empty");
         message.warning("姿态监测数据为空");
@@ -107,9 +173,9 @@ const Dashboard: React.FC = () => {
 
   const loadAlertData = async () => {
     try {
-      // const alertRes = await fetchAlertCorrelation();
       setAlertDataState("loading")
-      const alertRes = await fetchAlertData(dateRange)
+      const alertRes = await fetchAlertDataReal(dateRange);
+      // 如果需要使用 mock 数据，改为：const alertRes = await fetchAlertData(dateRange);
       if (alertRes.length === 0) {
         setAlertDataState("empty");
         message.warning("健康提醒数据为空");
@@ -120,6 +186,34 @@ const Dashboard: React.FC = () => {
     } catch (error) {
       setAlertDataState("error");
       console.error("健康提醒数据加载失败:", error);
+    }
+  };
+
+  // 重置数据库数据
+  const handleResetData = async () => {
+    try {
+      await window.electron.database.reset();
+      message.success("数据已清空");
+      // 清空状态并重新加载当前 tab 数据
+      setScreenData([]);
+      setPostureData([]);
+      setAlertData([]);
+      switch (key) {
+        case "1":
+          loadScreenData();
+          break;
+        case "2":
+          loadAlertData();
+          break;
+        case "3":
+          loadPostureData();
+          break;
+        default:
+          break;
+      }
+    } catch (error) {
+      console.error("重置数据失败:", error);
+      message.error("重置数据失败");
     }
   };
 
@@ -192,7 +286,8 @@ const Dashboard: React.FC = () => {
                 }
               }
             ]}
-            annotations={[
+            // antd charts 类型定义缺少 regionFilter，这里强制断言
+            annotations={([
               {
                 type: "regionFilter",
                 start: ["min", 0],
@@ -200,7 +295,7 @@ const Dashboard: React.FC = () => {
                 color: "#f6ffed",
                 apply: ["line"]
               }
-            ]}
+            ] as any)}
             height={CHART_HEIGHT}
             padding="auto"
             slider={{ start: 0.1, end: 0.9 }}
@@ -517,6 +612,15 @@ const Dashboard: React.FC = () => {
               style={{ width: screens.md ? 256 : "100%" }}
               allowClear={false}
             />
+            <Popconfirm
+              title="确认清空所有数据？"
+              description="此操作会删除数据库中的屏幕使用、健康提醒和姿势数据，且不可恢复。"
+              okText="确认清空"
+              cancelText="取消"
+              onConfirm={handleResetData}
+            >
+              <Button danger>重置数据</Button>
+            </Popconfirm>
           </div>
         }
         bordered={false}
